@@ -3,7 +3,7 @@ CXXFLAGS = -std=c++11 -Wall -Werror `pkg-config --cflags libndn-cxx`
 LIBS = `pkg-config --libs libndn-cxx`
 DESTDIR ?= /usr/local
 
-PROGRAMS = prefix-allocate
+PROGRAMS = prefix-allocate prefix-request
 
 all: $(PROGRAMS)
 
