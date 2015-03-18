@@ -17,3 +17,7 @@ To compile and install:
 To uninstall:
 
     sudo make uninstall
+
+## Available Tools
+
+[prefix-allocate](prefix-allocate.md): allocate a prefix to requesting face
