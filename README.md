@@ -25,3 +25,5 @@ To uninstall:
 [prefix-allocate](prefix-allocate.md): allocate a prefix to requesting face
 
 [prefix-request](prefix-request.md): register a prefix to requesting face, where the prefix is determined by a server process that knows a shared secret
+
+[remote-register-prefix](remote-register-prefix.md): send a remote prefix registration command
