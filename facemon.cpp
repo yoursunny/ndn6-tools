@@ -22,9 +22,14 @@ static const std::string TAB = "\t";
 void
 printInterest(const Name& prefix, const Interest& interest)
 {
+  auto incomingFaceIdTag = interest.getTag<ndn::lp::IncomingFaceIdTag>();
+    if (incomingFaceIdTag == nullptr) {
+      return;
+    }
+
   std::cout << time(0) << TAB;
   std::cout << "INTEREST";
-  std::cout << TAB << interest.getLocalControlHeader().getIncomingFaceId();
+  std::cout << TAB << *incomingFaceIdTag;
   for (size_t i = prefix.size(); i < interest.getName().size(); ++i) {
     std::cout << TAB << interest.getName().get(i);
   }

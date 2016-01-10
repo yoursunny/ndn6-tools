@@ -1,5 +1,6 @@
 #include <ndn-cxx/management/nfd-controller.hpp>
 #include <ndn-cxx/management/nfd-control-response.hpp>
+#include <ndn-cxx/security/signing-helpers.hpp>
 
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
@@ -25,15 +26,13 @@ class Options
 public:
   Options()
     : commandPrefix("/localhop/nfd")
-    , hasIdentity(false)
   {
   }
 
 public:
   Name prefix;
   Name commandPrefix;
-  bool hasIdentity;
-  Name identity;
+  security::SigningInfo signingInfo;
   std::string faceUri;
 };
 
@@ -99,14 +98,8 @@ private:
     m_commandInterest = make_shared<Interest>(
                           nfd::RibRegisterCommand().getRequestName(
                             m_options.commandPrefix, params));
-
-    if (m_options.hasIdentity) {
-      m_keyChain.signByIdentity(*m_commandInterest, m_options.identity);
-    }
-    else {
-      m_keyChain.sign(*m_commandInterest);
-    }
-    m_commandInterest->setNextHopFaceId(m_faceId);
+    m_keyChain.sign(*m_commandInterest, m_options.signingInfo);
+    m_commandInterest->setTag(make_shared<lp::NextHopFaceIdTag>(m_faceId));
 
     this->setClientControlStrategy();
   }
@@ -187,7 +180,7 @@ main(int argc, char** argv)
     ("prefix,p", po::value<Name>(&opt.prefix)->required(), "prefix")
     ("command,c", po::value<Name>(&opt.commandPrefix), "command prefix")
     ("face,f", po::value<std::string>(&opt.faceUri)->required(), "canonical FaceUri of router")
-    ("identity,i", po::value<Name>(&opt.identity), "signing identity")
+    ("identity,i", po::value<Name>(), "signing identity")
     ;
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, options), vm);
@@ -202,7 +195,9 @@ main(int argc, char** argv)
     usage(std::cout, options);
     return 0;
   }
-  opt.hasIdentity = vm.count("identity") > 0;
+  if (vm.count("identity") > 0) {
+    opt.signingInfo = signingByIdentity(vm["identity"].as<std::string>());
+  }
 
   Program program(opt);
   program.run();

@@ -36,16 +36,21 @@ private:
   void
   processCommand(const Interest& interest)
   {
+    auto incomingFaceIdTag = interest.getTag<ndn::lp::IncomingFaceIdTag>();
+    if (incomingFaceIdTag == nullptr) {
+      return;
+    }
+
     char suffix[30];
     snprintf(suffix, sizeof(suffix), "%d_%d",
              static_cast<int>(::time(nullptr)),
-             static_cast<int>(interest.getLocalControlHeader().getIncomingFaceId()));
+             static_cast<int>(*incomingFaceIdTag));
     Name prefix(m_prefix);
     prefix.append(suffix);
 
     nfd::ControlParameters p;
     p.setName(prefix);
-    p.setFaceId(interest.getLocalControlHeader().getIncomingFaceId());
+    p.setFaceId(*incomingFaceIdTag);
     p.setOrigin(ORIGIN_ALLOCATE);
     p.setCost(800);
     m_controller.start<nfd::RibRegisterCommand>(p,

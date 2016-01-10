@@ -59,9 +59,14 @@ private:
       return; // URI not canonical
     }
 
+    auto incomingFaceIdTag = interest.getTag<ndn::lp::IncomingFaceIdTag>();
+    if (incomingFaceIdTag == nullptr) {
+      return;
+    }
+
     nfd::ControlParameters p;
     p.setName(prefix);
-    p.setFaceId(interest.getLocalControlHeader().getIncomingFaceId());
+    p.setFaceId(*incomingFaceIdTag);
     p.setOrigin(ORIGIN_PREFIX_REQUEST);
     p.setCost(800);
 
