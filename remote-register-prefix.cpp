@@ -196,7 +196,7 @@ main(int argc, char** argv)
     return 0;
   }
   if (vm.count("identity") > 0) {
-    opt.signingInfo = signingByIdentity(vm["identity"].as<std::string>());
+    opt.signingInfo = signingByIdentity(vm["identity"].as<Name>());
   }
 
   Program program(opt);

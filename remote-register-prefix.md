@@ -1,7 +1,7 @@
 # remote-register-prefix
 
-`remote-register-prefix` tool sends a remote prefix registration command to a specific gateway router.
-Unlike built-in remote prefix registration in NFD RIB daemon, this tool allows specifying signing identity and registered prefix independently.
+`remote-register-prefix` tool sends a prefix registration command to a specific gateway router.
+Unlike NFD-RIB automatic prefix propagation, this tool allows specifying signing identity and registered prefix independently.
 
 ## Usage
 

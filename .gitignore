@@ -3,3 +3,4 @@ prefix-allocate
 prefix-request
 tap-tunnel
 remote-register-prefix
+register-prefix-cmd
