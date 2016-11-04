@@ -1,5 +1,6 @@
-#include <ndn-cxx/management/nfd-controller.hpp>
-#include <ndn-cxx/management/nfd-control-response.hpp>
+#include <ndn-cxx/lp/tags.hpp>
+#include <ndn-cxx/mgmt/nfd/controller.hpp>
+#include <ndn-cxx/mgmt/nfd/control-response.hpp>
 #include <ndn-cxx/security/signing-helpers.hpp>
 
 #include <boost/program_options/options_description.hpp>
@@ -68,8 +69,8 @@ private:
         this->m_faceId = res.getFaceId();
         this->enableNextHopFaceId();
       },
-      [] (uint32_t code, const std::string& reason) {
-        std::cerr << "createFace: " << code << " " << reason << std::endl;
+      [] (const nfd::ControlResponse& resp) {
+        std::cerr << "createFace: " << resp.getCode() << " " << resp.getText() << std::endl;
         exit(1);
       });
   }
@@ -83,8 +84,8 @@ private:
     m_controller.start<nfd::FaceEnableLocalControlCommand>(
       params,
       bind([this] { this->prepareCommandInterest(); }),
-      [] (uint32_t code, const std::string& reason) {
-        std::cerr << "enableNextHopFaceId: " << code << " " << reason << std::endl;
+      [] (const nfd::ControlResponse& resp) {
+        std::cerr << "enableNextHopFaceId: " << resp.getCode() << " " << resp.getText() << std::endl;
         exit(1);
       });
   }
@@ -114,8 +115,8 @@ private:
     m_controller.start<nfd::StrategyChoiceSetCommand>(
       params,
       bind([this] { this->sendCommandInterest(); }),
-      [] (uint32_t code, const std::string& reason) {
-        std::cerr << "setClientControlStrategy: " << code << " " << reason << std::endl;
+      [] (const nfd::ControlResponse& resp) {
+        std::cerr << "setClientControlStrategy: " << resp.getCode() << " " << resp.getText() << std::endl;
         exit(1);
       });
   }
@@ -151,8 +152,8 @@ private:
     m_controller.start<nfd::StrategyChoiceUnsetCommand>(
       params,
       bind([this] { exit(m_isOk ? 0 : 1); }),
-      [] (uint32_t code, const std::string& reason) {
-        std::cerr << "unsetClientControlStrategy: " << code << " " << reason << std::endl;
+      [] (const nfd::ControlResponse& resp) {
+        std::cerr << "unsetClientControlStrategy: " << resp.getCode() << " " << resp.getText() << std::endl;
         exit(1);
       });
   }
@@ -187,7 +188,7 @@ main(int argc, char** argv)
   try {
     po::notify(vm);
   }
-  catch (boost::program_options::error&) {
+  catch (const boost::program_options::error&) {
     usage(std::cerr, options);
     return 2;
   }

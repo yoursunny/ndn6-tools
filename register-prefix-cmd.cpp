@@ -1,4 +1,4 @@
-#include <ndn-cxx/management/nfd-controller.hpp>
+#include <ndn-cxx/mgmt/nfd/controller.hpp>
 #include <ndn-cxx/security/signing-helpers.hpp>
 #include <ndn-cxx/util/time-unit-test-clock.hpp>
 
@@ -49,7 +49,7 @@ main(int argc, char** argv)
   try {
     po::notify(vm);
   }
-  catch (boost::program_options::error&) {
+  catch (const boost::program_options::error&) {
     usage(std::cerr, options);
     return 2;
   }

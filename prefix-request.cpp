@@ -1,4 +1,5 @@
-#include <ndn-cxx/management/nfd-controller.hpp>
+#include <ndn-cxx/lp/tags.hpp>
+#include <ndn-cxx/mgmt/nfd/controller.hpp>
 #include <ndn-cxx/util/digest.hpp>
 #include <stdio.h>
 #include <time.h>
@@ -52,7 +53,7 @@ private:
     try {
       prefix = Name(prefixUri);
     }
-    catch (Name::Error&) {
+    catch (const Name::Error&) {
       return; // cannot decode Name
     }
     if (prefix.toUri() != prefixUri) {
@@ -123,10 +124,10 @@ private:
   }
 
   void
-  onRegisterFail(const nfd::ControlParameters& p, uint32_t code)
+  onRegisterFail(const nfd::ControlParameters& p, const nfd::ControlResponse& resp)
   {
     std::cout << ::time(nullptr) << TAB
-              << code << TAB
+              << resp.getCode() << TAB
               << p.getFaceId() << TAB
               << p.getName() << std::endl;
   }
