@@ -24,11 +24,11 @@ public:
   run()
   {
     nfd::ControlParameters p1;
-    p1.setLocalControlFeature(nfd::LOCAL_CONTROL_FEATURE_INCOMING_FACE_ID);
-    m_controller.start<nfd::FaceEnableLocalControlCommand>(p1,
-      nfd::Controller::CommandSucceedCallback(), bind(&std::exit, 1));
+    p1.setFlagBit(nfd::BIT_LOCAL_FIELDS_ENABLED, true);
+    m_controller.start<nfd::FaceUpdateCommand>(p1,
+      nullptr, std::bind(&std::exit, 1));
 
-    m_face.setInterestFilter("ndn:/localhop/prefix-request",
+    m_face.setInterestFilter("/localhop/prefix-request",
       bind(&PrefixRequest::processCommand, this, _2), bind(&std::exit, 1));
 
     m_face.processEvents();
@@ -68,7 +68,7 @@ private:
     nfd::ControlParameters p;
     p.setName(prefix);
     p.setFaceId(*incomingFaceIdTag);
-    p.setOrigin(ORIGIN_PREFIX_REQUEST);
+    p.setOrigin(static_cast<nfd::RouteOrigin>(ORIGIN_PREFIX_REQUEST));
     p.setCost(800);
 
     // verify answer

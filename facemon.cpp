@@ -10,8 +10,8 @@ using ndn::Interest;
 
 using ndn::nfd::Controller;
 using ndn::nfd::ControlParameters;
-using ndn::nfd::FaceEnableLocalControlCommand;
-using ndn::nfd::LOCAL_CONTROL_FEATURE_INCOMING_FACE_ID;
+using ndn::nfd::FaceUpdateCommand;
+using ndn::nfd::BIT_LOCAL_FIELDS_ENABLED;
 
 using ndn::nfd::FaceMonitor;
 using ndn::nfd::FaceEventNotification;
@@ -24,9 +24,9 @@ void
 printInterest(const Name& prefix, const Interest& interest)
 {
   auto incomingFaceIdTag = interest.getTag<ndn::lp::IncomingFaceIdTag>();
-    if (incomingFaceIdTag == nullptr) {
-      return;
-    }
+  if (incomingFaceIdTag == nullptr) {
+    return;
+  }
 
   std::cout << time(0) << TAB;
   std::cout << "INTEREST";
@@ -66,11 +66,11 @@ main()
 
   Controller controller(face, keyChain);
   ControlParameters p1;
-  p1.setLocalControlFeature(LOCAL_CONTROL_FEATURE_INCOMING_FACE_ID);
-  controller.start<FaceEnableLocalControlCommand>(p1,
-    Controller::CommandSucceedCallback(), std::bind(&std::exit, 1));
+  p1.setFlagBit(BIT_LOCAL_FIELDS_ENABLED, true);
+  controller.start<FaceUpdateCommand>(p1,
+    nullptr, std::bind(&std::exit, 1));
 
-  face.setInterestFilter("ndn:/localhop/facemon",
+  face.setInterestFilter("/localhop/facemon",
     &printInterest, std::bind(&std::exit, 1));
 
   FaceMonitor fm(face);

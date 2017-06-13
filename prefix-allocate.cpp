@@ -23,11 +23,11 @@ public:
   run()
   {
     nfd::ControlParameters p1;
-    p1.setLocalControlFeature(nfd::LOCAL_CONTROL_FEATURE_INCOMING_FACE_ID);
-    m_controller.start<nfd::FaceEnableLocalControlCommand>(p1,
-      nfd::Controller::CommandSucceedCallback(), bind(&std::exit, 1));
+    p1.setFlagBit(nfd::BIT_LOCAL_FIELDS_ENABLED, true);
+    m_controller.start<nfd::FaceUpdateCommand>(p1,
+      nullptr, std::bind(&std::exit, 1));
 
-    m_face.setInterestFilter("ndn:/localhop/prefix-allocate",
+    m_face.setInterestFilter("/localhop/prefix-allocate",
       bind(&PrefixAllocate::processCommand, this, _2), bind(&std::exit, 1));
 
     m_face.processEvents();
@@ -37,7 +37,7 @@ private:
   void
   processCommand(const Interest& interest)
   {
-    auto incomingFaceIdTag = interest.getTag<ndn::lp::IncomingFaceIdTag>();
+    auto incomingFaceIdTag = interest.getTag<lp::IncomingFaceIdTag>();
     if (incomingFaceIdTag == nullptr) {
       return;
     }
@@ -52,7 +52,7 @@ private:
     nfd::ControlParameters p;
     p.setName(prefix);
     p.setFaceId(*incomingFaceIdTag);
-    p.setOrigin(ORIGIN_ALLOCATE);
+    p.setOrigin(static_cast<nfd::RouteOrigin>(ORIGIN_ALLOCATE));
     p.setCost(800);
     m_controller.start<nfd::RibRegisterCommand>(p,
       bind(&PrefixAllocate::onRegisterSucceed, this, _1, interest),

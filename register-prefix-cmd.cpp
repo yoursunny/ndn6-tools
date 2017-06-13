@@ -72,7 +72,7 @@ main(int argc, char** argv)
   if (faceId >= 0) {
     params.setFaceId(faceId);
   }
-  params.setOrigin(origin);
+  params.setOrigin(static_cast<nfd::RouteOrigin>(origin));
   unique_ptr<nfd::ControlCommand> command;
   if (vm.count("unregister") > 0) {
     command = make_unique<nfd::RibUnregisterCommand>();

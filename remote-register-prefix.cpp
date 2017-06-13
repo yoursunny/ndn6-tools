@@ -79,9 +79,9 @@ private:
   enableNextHopFaceId()
   {
     nfd::ControlParameters params;
-    params.setLocalControlFeature(nfd::LOCAL_CONTROL_FEATURE_NEXT_HOP_FACE_ID);
+    params.setFlagBit(nfd::BIT_LOCAL_FIELDS_ENABLED, true);
 
-    m_controller.start<nfd::FaceEnableLocalControlCommand>(
+    m_controller.start<nfd::FaceUpdateCommand>(
       params,
       bind([this] { this->prepareCommandInterest(); }),
       [] (const nfd::ControlResponse& resp) {
@@ -135,6 +135,11 @@ private:
           std::cerr << "sendCommandInterest: " << resp.getCode() << " " << resp.getText() << std::endl;
           m_isOk = false;
         }
+      },
+      [this] (const Interest&, const lp::Nack& nack) {
+        std::cerr << "sendCommandInterest: nack " << nack.getReason() << std::endl;
+        m_isOk = false;
+        this->unsetClientControlStrategy();
       },
       bind([this] {
         std::cerr << "sendCommandInterest: timeout" << std::endl;
