@@ -1,7 +1,5 @@
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/security/key-chain.hpp>
-#include <ndn-cxx/util/notification-stream.hpp>
-#include <ndn-cxx/util/notification-subscriber.hpp>
 #include <ndn-cxx/util/logger.hpp>
 #include <ndn-cxx/util/logging.hpp>
 
@@ -9,14 +7,14 @@
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
 
+#include "tap-tunnel_consumer.hpp"
 #include "tap-tunnel_tun.hpp"
+#include "tap-tunnel_producer.hpp"
 
 namespace ndn {
 namespace tap_tunnel {
 
 NDN_LOG_INIT(taptunnel.Main);
-
-typedef name::Component TunPacket;
 
 namespace po = boost::program_options;
 
@@ -33,21 +31,22 @@ usage(std::ostream& os, const po::options_description& options)
 int
 main(int argc, char** argv)
 {
-  Name localPrefix;
-  Name remotePrefix;
+  ConsumerOptions consumerOptions;
+  ProducerOptions producerOptions;
   std::string ifname;
-  std::string password;
 
-  po::options_description options("Required options");
+  po::options_description options("Options");
   options.add_options()
     ("help,h", "print help message")
-    ("local-prefix,l", po::value<Name>(&localPrefix)->required(), "local prefix")
-    ("remote-prefix,r", po::value<Name>(&remotePrefix)->required(), "remote prefix")
+    ("local-prefix,l", po::value<Name>(&producerOptions.localPrefix)->required(), "local prefix")
+    ("remote-prefix,r", po::value<Name>(&consumerOptions.remotePrefix)->required(), "remote prefix")
     ("ifname,i", po::value<std::string>(&ifname)->required(), "TAP interface name")
+    ("outstandings", po::value<int>(&consumerOptions.maxOutstanding), "max outstanding Interests")
+    ("payloads", po::value<size_t>(&producerOptions.maxPayloads), "payload queue size")
     ;
   po::variables_map vm;
-  po::store(po::parse_command_line(argc, argv, options), vm);
   try {
+    po::store(po::parse_command_line(argc, argv, options), vm);
     po::notify(vm);
   }
   catch (boost::program_options::error&) {
@@ -63,30 +62,27 @@ main(int argc, char** argv)
 
   Face face;
   KeyChain keyChain;
-  util::NotificationStream<TunPacket> sender(face, localPrefix, keyChain);
-  util::NotificationSubscriber<TunPacket> receiver(face, remotePrefix, time::milliseconds(5000));
 
   Tun tun;
   tun.enableAsync(face.getIoService());
   tun.open(ifname);
 
+  Consumer consumer(consumerOptions, face);
+  Producer producer(producerOptions, face, keyChain);
+
   tun.afterReceive.connect(
     [&] (const Buffer& packet) {
       NDN_LOG_TRACE("send " << packet.size());
-      TunPacket tp(packet);
-      sender.postNotification(tp);
+      producer.enqueue(makeBinaryBlock(tlv::Content, packet.get(), packet.size()));
     });
   tun.startReceive();
 
-  receiver.onNotification.connect(
-    [&] (const TunPacket& tp) {
-      NDN_LOG_TRACE("recv " << tp.value_size());
-      tun.send(tp.value(), tp.value_size());
+  consumer.afterReceive.connect(
+    [&] (const Block& payload) {
+      NDN_LOG_TRACE("recv " << payload.value_size());
+      tun.send(payload.value(), payload.value_size());
     });
-  receiver.start();
-
-  face.registerPrefix(localPrefix, nullptr,
-    bind([] { NDN_LOG_FATAL("prefix-registration-failure"); }));
+  consumer.start();
 
   face.processEvents();
 
