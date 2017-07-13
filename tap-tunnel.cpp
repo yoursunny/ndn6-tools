@@ -40,7 +40,6 @@ main(int argc, char** argv)
     ("local-prefix,l", po::value<Name>(&localPrefix)->required(), "local prefix")
     ("remote-prefix,r", po::value<Name>(&remotePrefix)->required(), "remote prefix")
     ("ifname,i", po::value<std::string>(&ifname)->required(), "TAP interface name")
-    ("password,p", po::value<std::string>(&password)->required(), "password")
     ;
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, options), vm);
@@ -79,6 +78,9 @@ main(int argc, char** argv)
       tun.send(tp.value(), tp.value_size());
     });
   receiver.start();
+
+  face.registerPrefix(localPrefix, nullptr,
+    bind([] { std::cerr << "prefix-registration-failure" << std::endl; }));
 
   face.processEvents();
 
