@@ -7,7 +7,6 @@
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
 
-#include "tap-tunnel_evp-cipher.hpp"
 #include "tap-tunnel_tun.hpp"
 
 namespace ndn {
@@ -56,10 +55,6 @@ main(int argc, char** argv)
     usage(std::cout, options);
     return 0;
   }
-
-  EvpCipher aes;
-  aes.initialize(password);
-  password.clear();
 
   Face face;
   KeyChain keyChain;
