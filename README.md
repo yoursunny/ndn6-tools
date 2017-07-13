@@ -26,4 +26,8 @@ To uninstall:
 
 [prefix-request](prefix-request.md): register a prefix to requesting face, where the prefix is determined by a server process that knows a shared secret
 
+[register-prefix-cmd](register-prefix-cmd.md): prepare a prefix registration command
+
 [remote-register-prefix](remote-register-prefix.md): send a remote prefix registration command
+
+[tap-tunnel](tap-tunnel.md): create an Ethernet tunnel over NDN
