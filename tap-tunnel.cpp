@@ -1,7 +1,6 @@
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/security/key-chain.hpp>
-//#include <ndn-cxx/util/notification-stream.hpp>
-#include "notification-stream.hpp"
+#include <ndn-cxx/util/notification-stream.hpp>
 #include <ndn-cxx/util/notification-subscriber.hpp>
 
 #include <boost/program_options/options_description.hpp>
