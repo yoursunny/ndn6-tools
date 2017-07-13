@@ -2,6 +2,8 @@
 #include <ndn-cxx/security/key-chain.hpp>
 #include <ndn-cxx/util/notification-stream.hpp>
 #include <ndn-cxx/util/notification-subscriber.hpp>
+#include <ndn-cxx/util/logger.hpp>
+#include <ndn-cxx/util/logging.hpp>
 
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
@@ -11,6 +13,8 @@
 
 namespace ndn {
 namespace tap_tunnel {
+
+NDN_LOG_INIT(taptunnel.Main);
 
 typedef name::Component TunPacket;
 
@@ -55,6 +59,8 @@ main(int argc, char** argv)
     return 0;
   }
 
+  util::Logging::setLevel("*", util::LogLevel::TRACE);
+
   Face face;
   KeyChain keyChain;
   util::NotificationStream<TunPacket> sender(face, localPrefix, keyChain);
@@ -66,7 +72,7 @@ main(int argc, char** argv)
 
   tun.afterReceive.connect(
     [&] (const Buffer& packet) {
-      std::cerr << "send " << packet.size() << std::endl;
+      NDN_LOG_TRACE("send " << packet.size());
       TunPacket tp(packet);
       sender.postNotification(tp);
     });
@@ -74,13 +80,13 @@ main(int argc, char** argv)
 
   receiver.onNotification.connect(
     [&] (const TunPacket& tp) {
-      std::cerr << "recv " << tp.value_size() << std::endl;
+      NDN_LOG_TRACE("recv " << tp.value_size());
       tun.send(tp.value(), tp.value_size());
     });
   receiver.start();
 
   face.registerPrefix(localPrefix, nullptr,
-    bind([] { std::cerr << "prefix-registration-failure" << std::endl; }));
+    bind([] { NDN_LOG_FATAL("prefix-registration-failure"); }));
 
   face.processEvents();
 
