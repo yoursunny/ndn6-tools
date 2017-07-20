@@ -1,6 +1,7 @@
 #ifndef TAP_TUNNEL_CONSUMER_HPP
 #define TAP_TUNNEL_CONSUMER_HPP
 
+#include "tap-tunnel_payload-queue.hpp"
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/util/signal.hpp>
 
@@ -17,7 +18,7 @@ struct ConsumerOptions
 class Consumer : noncopyable
 {
 public:
-  Consumer(const ConsumerOptions& options, Face& face);
+  Consumer(const ConsumerOptions& options, PayloadQueue& payloads, Face& face);
 
   void
   start();
@@ -34,6 +35,7 @@ private:
 private:
   const ConsumerOptions m_options;
   Face& m_face;
+  PayloadQueue& m_payloads;
 
   int m_nOutstanding; ///< number of outstanding Interests
   uint64_t m_seq; ///< next sequence number

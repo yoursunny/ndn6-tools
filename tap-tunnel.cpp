@@ -78,7 +78,7 @@ main(int argc, char** argv)
   tun.open(ifname);
 
   PayloadQueue payloads(payloadQueueOptions);
-  Consumer consumer(consumerOptions, face);
+  Consumer consumer(consumerOptions, payloads, face);
   Producer producer(producerOptions, payloads, face, keyChain);
 
   tun.afterReceive.connect(
@@ -86,15 +86,16 @@ main(int argc, char** argv)
       NDN_LOG_TRACE("send " << packet->size());
       payloads.enqueue(packet);
     });
+
+  auto recvCallback = [&] (const Block& payload) {
+    NDN_LOG_TRACE("recv " << payload.value_size());
+    tun.send(payload.value(), payload.value_size());
+  };
+  consumer.afterReceive.connect(recvCallback);
+  producer.afterReceive.connect(recvCallback);
+
   tun.startReceive();
-
-  consumer.afterReceive.connect(
-    [&] (const Block& payload) {
-      NDN_LOG_TRACE("recv " << payload.value_size());
-      tun.send(payload.value(), payload.value_size());
-    });
   consumer.start();
-
   face.processEvents();
 
   return 0;

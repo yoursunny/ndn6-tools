@@ -8,6 +8,7 @@
 #include <ndn-cxx/security/signing-helpers.hpp>
 #include <ndn-cxx/util/scheduler.hpp>
 #include <ndn-cxx/util/scheduler-scoped-event-id.hpp>
+#include <ndn-cxx/util/signal.hpp>
 
 namespace ndn {
 namespace tap_tunnel {
@@ -24,6 +25,8 @@ class Producer : noncopyable
 {
 public:
   Producer(const ProducerOptions& options, PayloadQueue& payloads, Face& face, KeyChain& keyChain);
+
+  util::signal::Signal<Producer, Block> afterReceive;
 
 private:
   void

@@ -40,6 +40,14 @@ Producer::processInterest(const Interest& interest)
   NDN_LOG_TRACE("add-request seq=" << seq << " payloads=" << m_payloads.size() <<
                 " requests=" << m_requests.size());
 
+  if (!interest.getExclude().empty()) {
+    auto excluded = interest.getExclude().begin();
+    if (excluded->isSingular()) {
+      NDN_LOG_TRACE("received-piggyback seq=" << seq);
+      this->afterReceive(excluded->from);
+    }
+  }
+
   this->reply();
 }
 

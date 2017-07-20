@@ -12,7 +12,7 @@ namespace tap_tunnel {
 struct PayloadQueueOptions
 {
   size_t capacity = 16;
-  size_t smallThreshold = 14 + 40 + 20; // Ethernet+IPv6+TCP headers
+  size_t smallThreshold = 100; ///< small packets can be piggybacked in Interest Exclude
 };
 
 class PayloadQueue : noncopyable
