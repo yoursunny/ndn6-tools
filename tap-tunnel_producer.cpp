@@ -7,12 +7,13 @@ namespace tap_tunnel {
 
 NDN_LOG_INIT(taptunnel.Producer);
 
-Producer::Producer(const ProducerOptions& options, Face& face, KeyChain& keyChain)
+Producer::Producer(const ProducerOptions& options, PayloadQueue& payloads, Face& face, KeyChain& keyChain)
   : m_options(options)
   , m_face(face)
   , m_keyChain(keyChain)
   , m_sched(m_face.getIoService())
   , m_tickEvt(m_sched)
+  , m_payloads(payloads)
 {
   face.setInterestFilter(m_options.localPrefix,
     bind(&Producer::processInterest, this, _2),
@@ -22,23 +23,6 @@ Producer::Producer(const ProducerOptions& options, Face& face, KeyChain& keyChai
     }));
 
   this->tick();
-}
-
-bool
-Producer::enqueue(Block&& payload)
-{
-  if (m_payloads.size() >= m_options.maxPayloads) {
-    NDN_LOG_WARN("payload-queue-full payloads=" << m_payloads.size() <<
-                 " requests=" << m_requests.size());
-    return false;
-  }
-
-  m_payloads.emplace(payload);
-  NDN_LOG_TRACE("add-payload payloads=" << m_payloads.size() <<
-                " requests=" << m_requests.size());
-
-  this->reply();
-  return true;
 }
 
 void
@@ -67,8 +51,7 @@ Producer::reply()
     NDN_LOG_TRACE("reply-payload seq=" << seq <<
                   " payloads=" << (m_payloads.size() - 1) <<
                   " requests=" << (m_requests.size() - 1));
-    this->sendData(seq, m_payloads.front());
-    m_payloads.pop();
+    this->sendData(seq, m_payloads.dequeue());
     m_requests.pop();
   }
 

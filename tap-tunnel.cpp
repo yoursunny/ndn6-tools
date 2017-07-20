@@ -31,6 +31,7 @@ usage(std::ostream& os, const po::options_description& options)
 int
 main(int argc, char** argv)
 {
+  PayloadQueueOptions payloadQueueOptions;
   ConsumerOptions consumerOptions;
   ProducerOptions producerOptions;
   std::string ifname;
@@ -41,9 +42,9 @@ main(int argc, char** argv)
     ("local-prefix,l", po::value<Name>(&producerOptions.localPrefix)->required(), "local prefix")
     ("remote-prefix,r", po::value<Name>(&consumerOptions.remotePrefix)->required(), "remote prefix")
     ("ifname,i", po::value<std::string>(&ifname)->required(), "TAP interface name")
+    ("payloads", po::value<size_t>(&payloadQueueOptions.capacity), "payload queue length")
     ("outstandings", po::value<int>(&consumerOptions.maxOutstanding), "max outstanding Interests")
     ("lifetime", po::value<uint16_t>(), "InterestLifetime (millis)")
-    ("payloads", po::value<size_t>(&producerOptions.maxPayloads), "payload queue size")
     ("ansdlr", po::value<uint16_t>(), "answer deadline deduction (millis)")
     ;
   po::variables_map vm;
@@ -76,13 +77,14 @@ main(int argc, char** argv)
   tun.enableAsync(face.getIoService());
   tun.open(ifname);
 
+  PayloadQueue payloads(payloadQueueOptions);
   Consumer consumer(consumerOptions, face);
-  Producer producer(producerOptions, face, keyChain);
+  Producer producer(producerOptions, payloads, face, keyChain);
 
   tun.afterReceive.connect(
     [&] (const Buffer& packet) {
       NDN_LOG_TRACE("send " << packet.size());
-      producer.enqueue(makeBinaryBlock(tlv::Content, packet.get(), packet.size()));
+      payloads.enqueue(makeBinaryBlock(tlv::Content, packet.get(), packet.size()));
     });
   tun.startReceive();
 

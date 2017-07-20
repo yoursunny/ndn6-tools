@@ -1,7 +1,7 @@
 #ifndef TAP_TUNNEL_PRODUCER_HPP
 #define TAP_TUNNEL_PRODUCER_HPP
 
-#include <queue>
+#include "tap-tunnel_payload-queue.hpp"
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/security/key-chain.hpp>
 #include <ndn-cxx/security/signing-info.hpp>
@@ -15,19 +15,15 @@ namespace tap_tunnel {
 struct ProducerOptions
 {
   Name localPrefix;
-  size_t maxPayloads = 16;
   security::SigningInfo signer = security::signingWithSha256();
   time::milliseconds answerDeadlineReduction = time::seconds(1); ///< Data must be sent within (InterestLifetime - reduction)
-  time::nanoseconds tickInterval = time::milliseconds(200); ///< how often to check expiring requests
+  time::nanoseconds tickInterval = time::milliseconds(10);
 };
 
 class Producer : noncopyable
 {
 public:
-  Producer(const ProducerOptions& options, Face& face, KeyChain& keyChain);
-
-  bool
-  enqueue(Block&& payload);
+  Producer(const ProducerOptions& options, PayloadQueue& payloads, Face& face, KeyChain& keyChain);
 
 private:
   void
@@ -55,7 +51,7 @@ private:
   util::scheduler::Scheduler m_sched;
   util::scheduler::ScopedEventId m_tickEvt;
 
-  std::queue<Block> m_payloads; ///< payloads to send
+  PayloadQueue& m_payloads; ///< payloads to send
   std::queue<PendingInterest> m_requests; ///< unexpired pending Interests
 };
 
