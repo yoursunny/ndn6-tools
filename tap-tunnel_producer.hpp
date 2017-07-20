@@ -15,10 +15,9 @@ namespace tap_tunnel {
 struct ProducerOptions
 {
   Name localPrefix;
-  /// Data must be sent within (InterestLifetime - reduction)
-  time::nanoseconds answerDeadlineReduction = time::seconds(1);
   size_t maxPayloads = 16;
   security::SigningInfo signer = security::signingWithSha256();
+  time::milliseconds answerDeadlineReduction = time::seconds(1); ///< Data must be sent within (InterestLifetime - reduction)
   time::nanoseconds tickInterval = time::milliseconds(200); ///< how often to check expiring requests
 };
 

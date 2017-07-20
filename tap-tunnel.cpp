@@ -42,7 +42,9 @@ main(int argc, char** argv)
     ("remote-prefix,r", po::value<Name>(&consumerOptions.remotePrefix)->required(), "remote prefix")
     ("ifname,i", po::value<std::string>(&ifname)->required(), "TAP interface name")
     ("outstandings", po::value<int>(&consumerOptions.maxOutstanding), "max outstanding Interests")
+    ("lifetime", po::value<uint16_t>(), "InterestLifetime (millis)")
     ("payloads", po::value<size_t>(&producerOptions.maxPayloads), "payload queue size")
+    ("ansdlr", po::value<uint16_t>(), "answer deadline deduction (millis)")
     ;
   po::variables_map vm;
   try {
@@ -56,6 +58,13 @@ main(int argc, char** argv)
   if (vm.count("help") > 0) {
     usage(std::cout, options);
     return 0;
+  }
+
+  if (vm.count("lifetime") > 0) {
+    consumerOptions.interestLifetime = time::milliseconds(vm["lifetime"].as<uint16_t>());
+  }
+  if (vm.count("ansdlr") > 0) {
+    producerOptions.answerDeadlineReduction = time::milliseconds(vm["ansdlr"].as<uint16_t>());
   }
 
   util::Logging::setLevel("*", util::LogLevel::TRACE);
