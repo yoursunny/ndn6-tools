@@ -3,6 +3,8 @@
 
 #include <queue>
 #include <ndn-cxx/encoding/block.hpp>
+#include <ndn-cxx/encoding/buffer.hpp>
+#include <ndn-cxx/encoding/tlv.hpp>
 
 namespace ndn {
 namespace tap_tunnel {
@@ -32,17 +34,17 @@ public:
   }
 
   bool
-  enqueue(Block&& payload);
+  enqueue(ConstBufferPtr payload);
 
   bool
   isSmall() const;
 
   Block
-  dequeue();
+  dequeue(uint32_t tlvType = tlv::Content);
 
 private:
   PayloadQueueOptions m_options;
-  std::queue<Block> m_payloads;
+  std::queue<ConstBufferPtr> m_payloads;
 };
 
 } // namespace tap_tunnel

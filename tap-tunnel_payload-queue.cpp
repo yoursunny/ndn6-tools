@@ -9,13 +9,13 @@ PayloadQueue::PayloadQueue(const PayloadQueueOptions& options)
 }
 
 bool
-PayloadQueue::enqueue(Block&& payload)
+PayloadQueue::enqueue(ConstBufferPtr payload)
 {
   if (size() >= m_options.capacity) {
     return false;
   }
 
-  m_payloads.emplace(payload);
+  m_payloads.push(payload);
   return true;
 }
 
@@ -23,15 +23,15 @@ bool
 PayloadQueue::isSmall() const
 {
   BOOST_ASSERT(size() > 0);
-  return m_payloads.front().size() <= m_options.smallThreshold;
+  return m_payloads.front()->size() <= m_options.smallThreshold;
 }
 
 Block
-PayloadQueue::dequeue()
+PayloadQueue::dequeue(uint32_t tlvType)
 {
-  Block payload = m_payloads.front();
+  Block block(tlvType, m_payloads.front());
   m_payloads.pop();
-  return payload;
+  return block;
 }
 
 } // namespace tap_tunnel

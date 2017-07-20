@@ -73,18 +73,18 @@ Tun::send(const Buffer& packet)
   this->send(packet.get(), packet.size());
 }
 
-Buffer
+ConstBufferPtr
 Tun::receive()
 {
   const size_t FRAMESIZE = 1514;
-  Buffer packet(FRAMESIZE);
+  BufferPtr packet = make_shared<Buffer>(FRAMESIZE);
 
-  int nBytes = ::read(m_fd, packet.get(), packet.size());
+  int nBytes = ::read(m_fd, packet->get(), packet->size());
   if (nBytes < 0) {
     throw std::runtime_error("receive error");
   }
 
-  packet.resize(nBytes);
+  packet->resize(nBytes);
   return packet;
 }
 
@@ -112,15 +112,14 @@ Tun::asyncRead(const ReceiveCallback& callback, const boost::system::error_code&
     throw std::runtime_error("async receive failed: " + error.message());
   }
 
-  Buffer packet = this->receive();
-  callback(packet);
+  callback(this->receive());
 }
 
 void
 Tun::startReceive()
 {
   this->asyncReceive(
-    [this] (const Buffer& packet) {
+    [this] (const ConstBufferPtr& packet) {
       this->afterReceive(packet);
       this->startReceive();
     });

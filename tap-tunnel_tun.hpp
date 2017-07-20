@@ -50,17 +50,17 @@ public:
 public:
   /** \brief synchronous receive
    */
-  Buffer
+  ConstBufferPtr
   receive();
 
-  typedef std::function<void(const Buffer&)> ReceiveCallback;
+  using ReceiveCallback = std::function<void(ConstBufferPtr)>;
 
   /** \brief asynchronous single receive
    */
   void
   asyncReceive(const ReceiveCallback& callback);
 
-  ndn::util::signal::Signal<Tun, Buffer> afterReceive;
+  ndn::util::signal::Signal<Tun, ConstBufferPtr> afterReceive;
 
   /** \brief asynchronous multiple receive using signal
    */

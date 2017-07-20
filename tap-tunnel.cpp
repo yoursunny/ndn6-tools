@@ -82,9 +82,9 @@ main(int argc, char** argv)
   Producer producer(producerOptions, payloads, face, keyChain);
 
   tun.afterReceive.connect(
-    [&] (const Buffer& packet) {
-      NDN_LOG_TRACE("send " << packet.size());
-      payloads.enqueue(makeBinaryBlock(tlv::Content, packet.get(), packet.size()));
+    [&] (ConstBufferPtr packet) {
+      NDN_LOG_TRACE("send " << packet->size());
+      payloads.enqueue(packet);
     });
   tun.startReceive();
 
