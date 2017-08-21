@@ -68,8 +68,6 @@ main(int argc, char** argv)
     producerOptions.answerDeadlineReduction = time::milliseconds(vm["ansdlr"].as<uint16_t>());
   }
 
-  util::Logging::setLevel("*", util::LogLevel::TRACE);
-
   Face face;
   KeyChain keyChain;
 
