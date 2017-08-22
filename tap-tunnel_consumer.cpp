@@ -43,10 +43,15 @@ Consumer::addInterest()
   m_face.expressInterest(interest,
     [this] (const Interest& interest, const Data& data) {
       --m_nOutstanding;
-      NDN_LOG_TRACE("Data seq=" << interest.getName().at(-1).toSequenceNumber() <<
-                    " outstanding=" << m_nOutstanding);
+      m_lastData = time::steady_clock::now();
       if (data.getContent().value_size() > 0) {
+        NDN_LOG_TRACE("Data-payload seq=" << interest.getName().at(-1).toSequenceNumber() <<
+                      " outstanding=" << m_nOutstanding);
         this->afterReceive(data.getContent());
+      }
+      else {
+        NDN_LOG_TRACE("Data-empty seq=" << interest.getName().at(-1).toSequenceNumber() <<
+                      " outstanding=" << m_nOutstanding);
       }
       this->next();
     },
@@ -70,7 +75,12 @@ Consumer::addInterest()
 void
 Consumer::next()
 {
-  while (m_nOutstanding < m_options.maxOutstanding) {
+  int desiredOutstanding = m_options.maxOutstanding;
+  if (time::steady_clock::now() > m_lastData + m_options.peerInactiveTime) {
+    // peer is offline
+    desiredOutstanding = 1;
+  }
+  while (m_nOutstanding < desiredOutstanding) {
     this->addInterest();
   }
 }

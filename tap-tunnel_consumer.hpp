@@ -13,6 +13,7 @@ struct ConsumerOptions
   Name remotePrefix;
   int maxOutstanding = 4; ///< number of outstanding Interests
   time::milliseconds interestLifetime = time::seconds(2);
+  time::nanoseconds peerInactiveTime = time::seconds(30); ///< time without Data before declaring peer as inactive
 };
 
 class Consumer : noncopyable
@@ -39,6 +40,7 @@ private:
 
   int m_nOutstanding; ///< number of outstanding Interests
   uint64_t m_seq; ///< next sequence number
+  time::steady_clock::TimePoint m_lastData; ///< last incoming Data timestamp
 };
 
 } // namespace tap_tunnel
