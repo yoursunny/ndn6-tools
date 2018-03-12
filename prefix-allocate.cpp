@@ -1,3 +1,4 @@
+#include <ndn-cxx/face.hpp>
 #include <ndn-cxx/lp/tags.hpp>
 #include <ndn-cxx/mgmt/nfd/controller.hpp>
 #include <stdio.h>

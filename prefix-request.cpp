@@ -1,6 +1,7 @@
+#include <ndn-cxx/face.hpp>
 #include <ndn-cxx/lp/tags.hpp>
 #include <ndn-cxx/mgmt/nfd/controller.hpp>
-#include <ndn-cxx/util/digest.hpp>
+#include <ndn-cxx/util/sha256.hpp>
 #include <stdio.h>
 #include <time.h>
 

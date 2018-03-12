@@ -70,7 +70,7 @@ Tun::send(const uint8_t* pkt, const size_t size)
 void
 Tun::send(const Buffer& packet)
 {
-  this->send(packet.get(), packet.size());
+  this->send(packet.data(), packet.size());
 }
 
 ConstBufferPtr
@@ -79,7 +79,7 @@ Tun::receive()
   const size_t FRAMESIZE = 1514;
   BufferPtr packet = make_shared<Buffer>(FRAMESIZE);
 
-  int nBytes = ::read(m_fd, packet->get(), packet->size());
+  int nBytes = ::read(m_fd, packet->data(), packet->size());
   if (nBytes < 0) {
     throw std::runtime_error("receive error");
   }
