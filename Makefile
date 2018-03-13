@@ -17,7 +17,7 @@ clean:
 	rm -f $(PROGRAMS)
 
 install: all
-	cp $(PROGRAMS) $(DESTDIR)/bin/
+	sh -c 'for P in $(PROGRAMS); do cp $$P $(DESTDIR)/bin/ndn6-$$P; done'
 
 uninstall:
-	cd $(DESTDIR)/bin && rm -f $(PROGRAMS)
+	sh -c 'for P in $(PROGRAMS); do rm -f $(DESTDIR)/bin/ndn6-$$P; done'
