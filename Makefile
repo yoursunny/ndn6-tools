@@ -3,7 +3,7 @@ CXXFLAGS = -std=c++11 -Wall -Werror `pkg-config --cflags libndn-cxx` -DBOOST_LOG
 LIBS = `pkg-config --libs libndn-cxx`
 DESTDIR ?= /usr/local
 
-PROGRAMS = facemon prefix-allocate prefix-request register-prefix-cmd tap-tunnel
+PROGRAMS = facemon prefix-allocate prefix-request register-prefix-cmd serve-certs tap-tunnel
 
 all: $(PROGRAMS)
 

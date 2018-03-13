@@ -28,4 +28,6 @@ To uninstall:
 
 [register-prefix-cmd](register-prefix-cmd.md): prepare a prefix registration command
 
+[serve-certs](serve-certs.md): serve certificates
+
 [tap-tunnel](tap-tunnel.md): create an Ethernet tunnel over NDN
