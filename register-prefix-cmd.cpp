@@ -1,4 +1,5 @@
 #include <ndn-cxx/mgmt/nfd/controller.hpp>
+#include <ndn-cxx/security/command-interest-signer.hpp>
 #include <ndn-cxx/security/signing-helpers.hpp>
 #include <ndn-cxx/util/time-unit-test-clock.hpp>
 
@@ -28,7 +29,7 @@ main(int argc, char** argv)
   Name commandPrefix("/localhop/nfd");
   int faceId = -1;
   int origin = 0;
-  security::SigningInfo signingInfo;
+  security::SigningInfo si;
   int advanceClock = 0;
 
   po::options_description options("Options");
@@ -58,7 +59,7 @@ main(int argc, char** argv)
     return 0;
   }
   if (vm.count("identity") > 0) {
-    signingInfo = signingByIdentity(vm["identity"].as<Name>());
+    si = signingByIdentity(vm["identity"].as<Name>());
   }
   if (advanceClock > 0) {
     time::system_clock::TimePoint now = time::system_clock::now();
@@ -84,10 +85,12 @@ main(int argc, char** argv)
       (vm.count("capture") > 0 ? nfd::ROUTE_FLAG_CAPTURE : 0)
     );
   }
-  shared_ptr<Interest> interest = make_shared<Interest>(command->getRequestName(commandPrefix, params));
-  KeyChain().sign(*interest, signingInfo);
 
-  Block wire = interest->wireEncode();
+  KeyChain keyChain;
+  security::CommandInterestSigner cis(keyChain);
+  Interest interest = cis.makeCommandInterest(command->getRequestName(commandPrefix, params), si);
+
+  Block wire = interest.wireEncode();
   std::cout.write(reinterpret_cast<const char*>(wire.wire()), wire.size());
   return 0;
 }
