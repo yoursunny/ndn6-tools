@@ -18,4 +18,5 @@ To use the systemd service:
 2. `sudo mkdir /var/lib/ndn/serve-certs`.
 3. Place one or more BASE64-encoded certificates (`*.ndncert`) into `/var/lib/ndn/serve-certs` directory.
 4. `sudo chown -R ndn:ndn /var/lib/ndn/serve-certs`.
-5. `sudo systemd start serve-certs`.
+5. `sudo systemctl start serve-certs`.
+6. To autostart, `sudo systemctl enable serve-certs`.
