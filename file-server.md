@@ -12,3 +12,4 @@ On a client, retrieve `/directory/file.txt` with:
 
     ndncatchunks -d realtime /prefix/file.txt > file.txt
 
+[ndncatchunks.htm](./ndncatchunks.htm) is a web-based version of `ndncatchunks -d realtime`.

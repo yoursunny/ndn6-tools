@@ -1,0 +1,120 @@
+<!doctype html>
+<title>ndncatchunks</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/purecss@1.0.0">
+
+<h1>ndncatchunk online</h1>
+
+<form id="request" class="pure-form pure-form-aligned"><fieldset>
+
+<div class="pure-control-group">
+  <label for="router">Router</label>
+  <select id="router">
+    <option value="wss://hobo.cs.arizona.edu/ws/" selected>ARIZONA</option>
+    <option value="wss://spurs.cs.ucla.edu/ws/">UCLA</option>
+    <option value="wss://ndnhub.ics.uci.edu/ws/">UCI</option>
+    <option value="wss://wundngw.arl.wustl.edu/ws/">WUSTL</option>
+  </select>
+</div>
+
+<div class="pure-control-group">
+  <label for="name">Name</label>
+  <input id="name" class="pure-input-2-3" type="text" placeholder="/prefix">
+</div>
+
+<div class="pure-controls">
+  <input id="go" type="submit" class="pure-button pure-button-primary" value="FETCH">
+</div>
+
+<div class="pure-controls">
+  <p id="status"></p>
+  <a id="save" class="pure-button" style="color:#fff; background:#1c7c41;">SAVE</a>
+</div>
+
+</fieldset></form>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.2"></script>
+<script src="https://cdn.jsdelivr.net/gh/named-data/ndn-js@88e23edb3b5eaac375bb164cf4af19f0d6c9fe3e/build/ndn.min.js"></script>
+<script>
+ndn.noConflict();
+let name;
+let face;
+
+function discoverVersion() {
+  $("#status").text("Performing version discovery");
+  return new Promise((resolve, reject) => {
+    const rdrName = new ndn.Name(name);
+    rdrName.append("metadata", ndn.ComponentType.OTHER_CODE, 32);
+    const rdrInterest = new ndn.Interest(rdrName);
+    rdrInterest.setCanBePrefix(true);
+    rdrInterest.setMustBeFresh(true);
+    console.log(rdrName.toUri());
+    face.expressInterest(rdrInterest,
+      (interest, data) => {
+        if (data.getMetaInfo().getType() != ndn.ContentType.BLOB) {
+          reject("RDR-BAD-TYPE");
+          return;
+        }
+        const versioned = new ndn.Name();
+        versioned.wireDecode(data.getContent());
+        $("#status").text("Retrieving " + versioned.toUri());
+        resolve(versioned);
+      },
+      (interest) => { reject("RDR-TIMEOUT"); },
+      (interest, nack) => { reject("RDR-NACK"); }
+    );
+  });
+}
+
+function retrieveSegments(versioned) {
+  return new Promise((resolve, reject) => {
+    const baseName = new ndn.Name(versioned).appendSegment(0);
+    const baseInterest = new ndn.Interest(baseName);
+    baseInterest.setCanBePrefix(false);
+    baseInterest.setMustBeFresh(false);
+    ndn.SegmentFetcher.fetch(face, baseInterest, null,
+      (content) => {
+        resolve(content)
+      },
+      (errorCode, message) => { reject("FETCH-" + errorCode + " " + message); })
+  });
+}
+
+let file;
+
+function display(content) {
+  file = content;
+  $("#status").text("Retrieved " + file.size() + " octets");
+  $("#go").prop("disabled", false);
+
+  const blob = new Blob([file.buf()], { type: "application/octet-stream" });
+  const url = window.URL.createObjectURL(blob);
+  $("#save")
+  .attr("href", url)
+  .attr("download", name.get(-1).toEscapedString())
+  .show();
+}
+
+function reportError(msg) {
+  $("#status").text("ERROR: " + msg);
+  $("#go").prop("disabled", false);
+}
+
+$("#request").submit((evt) => {
+  evt.preventDefault();
+  $("#go").prop("disabled", true);
+  $("#save").hide();
+
+  if (face) {
+    face.close();
+  }
+  face = new ndn.Face({ host: $("#router").val() });
+  name = new ndn.Name($("#name").val());
+  discoverVersion()
+  .then(retrieveSegments)
+  .then(display)
+  .catch(reportError);
+  return false;
+});
+
+$("#save").hide();
+</script>
