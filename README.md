@@ -22,6 +22,8 @@ To uninstall:
 
 [facemon](facemon.md): log when a face is created or destroyed
 
+[file-server](file-server.md): serve file from filesystem
+
 [prefix-allocate](prefix-allocate.md): allocate a prefix to requesting face
 
 [prefix-request](prefix-request.md): register a prefix to requesting face, where the prefix is determined by a server process that knows a shared secret
