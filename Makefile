@@ -1,9 +1,9 @@
 CXX = g++
-CXXFLAGS = -std=c++14 -Wall -Werror `pkg-config --cflags libndn-cxx` -DBOOST_LOG_DYN_LINK
+CXXFLAGS = -std=c++14 -Wall -Werror `pkg-config --cflags libndn-cxx`
 LIBS = `pkg-config --libs libndn-cxx`
 DESTDIR ?= /usr/local
 
-PROGRAMS = facemon prefix-allocate prefix-request register-prefix-cmd serve-certs
+PROGRAMS = facemon file-server prefix-allocate prefix-request register-prefix-cmd serve-certs
 
 all: $(PROGRAMS)
 
