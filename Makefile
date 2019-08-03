@@ -10,11 +10,8 @@ all: $(PROGRAMS)
 %: %.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $< $(LIBS)
 
-tap-tunnel: tap-tunnel*.cpp tap-tunnel*.hpp
-	$(CXX) $(CXXFLAGS) -o $@ tap-tunnel*.cpp $(LIBS)
-
 clean:
-	rm -f $(PROGRAMS) tap-tunnel
+	rm -f $(PROGRAMS)
 
 install: all
 	sh -c 'for P in $(PROGRAMS); do cp $$P $(DESTDIR)/bin/ndn6-$$P; done'
