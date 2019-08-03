@@ -1,6 +1,8 @@
 #include <ndn-cxx/lp/tags.hpp>
 #include <ndn-cxx/mgmt/nfd/controller.hpp>
 #include <ndn-cxx/mgmt/nfd/face-monitor.hpp>
+
+#include <iostream>
 #include <time.h>
 
 using ndn::Face;

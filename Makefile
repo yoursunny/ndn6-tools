@@ -1,5 +1,6 @@
 CXX ?= g++
 CXXFLAGS ?= -std=c++14 -Wall -Werror `pkg-config --cflags libndn-cxx`
+LDFLAGS ?=
 LIBS ?= `pkg-config --libs libndn-cxx`
 DESTDIR ?= /usr/local
 
@@ -8,7 +9,7 @@ PROGRAMS = facemon file-server prefix-allocate prefix-request register-prefix-cm
 all: $(PROGRAMS)
 
 %: %.cpp
-	$(CXX) $(CXXFLAGS) -o $@ $< $(LIBS)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
 
 clean:
 	rm -f $(PROGRAMS)

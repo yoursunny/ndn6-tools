@@ -7,6 +7,8 @@
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
 
+#include <iostream>
+
 namespace ndn {
 namespace register_prefix_cmd {
 

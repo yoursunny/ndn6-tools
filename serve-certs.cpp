@@ -1,7 +1,9 @@
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/security/v2/certificate.hpp>
 #include <ndn-cxx/util/io.hpp>
+
 #include <cstdlib>
+#include <iostream>
 
 namespace ndn {
 namespace serve_certs {

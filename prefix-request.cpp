@@ -2,7 +2,9 @@
 #include <ndn-cxx/lp/tags.hpp>
 #include <ndn-cxx/mgmt/nfd/controller.hpp>
 #include <ndn-cxx/util/sha256.hpp>
-#include <stdio.h>
+
+#include <cstdio>
+#include <iostream>
 #include <time.h>
 
 namespace ndn {
