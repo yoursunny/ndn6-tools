@@ -31,3 +31,5 @@ To uninstall:
 [register-prefix-cmd](register-prefix-cmd.md): prepare a prefix registration command
 
 [serve-certs](serve-certs.md): serve certificates
+
+[unix-time-service](unix-time-service.md): answers queries of current Unix timestamp
