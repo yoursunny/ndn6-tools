@@ -7,6 +7,7 @@
 int
 main()
 {
+  ndn::name::setConventionEncoding(ndn::name::Convention::TYPED);
   ndn::Face face;
   ndn::KeyChain keyChain;
   ndn::Name prefix = "/localhop/unix-time";
