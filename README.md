@@ -6,7 +6,7 @@ This repository contains tools for yoursunny's (now discontinued) NDN6 router.
 
 `Makefile` assumes:
 
-* OS is Ubuntu 16.04
+* OS is Ubuntu 18.04 or 20.04
 * [ndn-cxx](https://named-data.net/doc/ndn-cxx/) has been installed from PPA
 
 To compile and install:
