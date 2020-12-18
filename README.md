@@ -11,12 +11,16 @@ This repository contains tools for yoursunny's (now discontinued) NDN6 router.
 
 To compile and install:
 
-    make
-    sudo make install
+```bash
+make
+sudo make install
+```
 
 To uninstall:
 
-    sudo make uninstall
+```bash
+sudo make uninstall
+```
 
 ## Available Tools
 

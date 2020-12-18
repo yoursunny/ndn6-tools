@@ -9,7 +9,7 @@ jobs:
     resource_class: small
     steps:
       - run: |
-          sudo add-apt-repository ppa:named-data/ppa-dev
+          sudo add-apt-repository ppa:named-data/ppa
           sudo apt-get install libndn-cxx-dev
       - checkout
       - run: make
