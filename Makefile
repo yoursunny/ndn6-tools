@@ -19,3 +19,15 @@ install: all
 
 uninstall:
 	sh -c 'for P in $(PROGRAMS); do rm -f $(DESTDIR)/bin/ndn6-$$P; done'
+
+install-serve-certs-service: serve-certs
+	install -d -m0755 /usr/local/lib/systemd/system
+	install -m0644 -T serve-certs.service /usr/local/lib/systemd/system/ndn6-serve-certs.service
+	install -d -m0755 -ondn -gndn /var/lib/ndn/serve-certs
+	systemctl daemon-reload
+
+uninstall-serve-certs-service:
+	systemctl disable ndn6-serve-certs || true
+	systemctl stop ndn6-serve-certs || true
+	rm /usr/local/lib/systemd/system/ndn6-serve-certs.service
+	systemctl daemon-reload

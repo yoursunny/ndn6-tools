@@ -1,13 +1,14 @@
 [Unit]
 Description=Serve NDN certificates.
-Requires=nfd.service
+BindsTo=nfd.service
 After=nfd.service
 
 [Service]
 Environment=HOME=/var/lib/ndn/nfd
 User=ndn
 Group=ndn
-ExecStart=/bin/sh -c 'cd /var/lib/ndn/serve-certs && /usr/local/bin/ndn6-serve-certs *.ndncert'
+WorkingDirectory=/var/lib/ndn/serve-certs
+ExecStart=sh -c '/usr/local/bin/ndn6-serve-certs *.ndncert'
 Restart=on-failure
 ProtectSystem=full
 PrivateTmp=yes

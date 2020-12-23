@@ -1,22 +1,38 @@
 # serve-certs
 
-`serve-certs` tool serves V2 certificates.
-For each certificate, it registers a prefix derived from the certificate name minus IssuerId and Version components.
-This allows Interests expressed with KeyLocatorName to reach this tool.
+`serve-certs` tool is a producer for V2 certificates.
+For each certificate, it registers a prefix derived from the certificate name minus IssuerId and Version components, which allows Interests of either key name or certificate name to reach this tool.
 
 ## Usage
 
 On a server, place BASE64 certificate files in a directory, and execute:
 
-    ./serve-certs /path/to/*.cert
+```bash
+ndn6-serve-certs /path/to/*.ndncert
+```
 
 ## systemd Service
 
-To use the systemd service:
+This tool can run as a systemd service.
 
-1. Place `serve-certs.service` to `/lib/systemd/system/serve-certs.service`.
-2. `sudo mkdir /var/lib/ndn/serve-certs`.
-3. Place one or more BASE64-encoded certificates (`*.ndncert`) into `/var/lib/ndn/serve-certs` directory.
-4. `sudo chown -R ndn:ndn /var/lib/ndn/serve-certs`.
-5. `sudo systemctl start serve-certs`.
-6. To autostart, `sudo systemctl enable serve-certs`.
+```bash
+# install the service unit
+sudo make install-serve-certs-service
+
+# add a certificate
+ndnsec cert-dump -i /U | sudo -u ndn tee /var/lib/ndn/serve-certs/U.ndncert >/dev/null
+
+# remove a certificate
+sudo -u ndn rm /var/lib/ndn/serve-certs/U.ndncert
+
+# start/restart the service
+# (you must restart the service after adding/removing a certificate)
+sudo systemctl restart ndn6-serve-certs
+
+# make the service autostart with the system
+sudo systemctl enable ndn6-serve-certs
+
+# uninstall the service unit
+# (you can manually delete /var/lib/ndn/serve-certs folder)
+sudo make uninstall-serve-certs-service
+```
