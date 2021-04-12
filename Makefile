@@ -23,7 +23,8 @@ clean:
 	rm -f $(PROGRAMS)
 
 install: all
-	sh -c 'for P in $(PROGRAMS); do cp $$P $(DESTDIR)/bin/ndn6-$$P; done'
+	install -d -m0755 $(DESTDIR)/bin
+	sh -c 'for P in $(PROGRAMS); do install $$P $(DESTDIR)/bin/ndn6-$$P; done'
 
 uninstall:
 	sh -c 'for P in $(PROGRAMS); do rm -f $(DESTDIR)/bin/ndn6-$$P; done'

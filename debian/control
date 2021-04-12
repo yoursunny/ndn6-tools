@@ -1,0 +1,13 @@
+Source: ndn6-tools
+Section: utils
+Priority: optional
+Maintainer: Junxiao Shi <deb@mail1.yoursunny.com>
+Build-Depends: debhelper (>= 10),
+               libndn-cxx-dev
+Standards-Version: 4.5.1
+Homepage: https://github.com/yoursunny/ndn6-tools
+
+Package: ndn6-tools
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: tools for yoursunny NDN router
