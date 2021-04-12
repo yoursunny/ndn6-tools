@@ -45,7 +45,7 @@ main(int argc, char** argv)
     ("no-inherit,I", "unset ChildInherit flag")
     ("capture,C", "set Capture flag")
     ("identity,i", po::value<Name>(), "signing identity")
-    ("advance-clock", po::value<int>(&advanceClock), "advance clock (millis)");
+    ("advance-clock", po::value<int>(&advanceClock), "advance clock (millis)")
     ;
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, options), vm);

@@ -4,7 +4,15 @@ LDFLAGS ?=
 LIBS ?= `pkg-config --libs libndn-cxx`
 DESTDIR ?= /usr/local
 
-PROGRAMS = facemon file-server prefix-allocate prefix-request register-prefix-cmd serve-certs unix-time-service
+PROGRAMS = \
+	facemon \
+	file-server \
+	prefix-allocate \
+	prefix-request \
+	register-prefix-cmd \
+	register-prefix-remote \
+	serve-certs \
+	unix-time-service
 
 all: $(PROGRAMS)
 

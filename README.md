@@ -34,6 +34,8 @@ sudo make uninstall
 
 [register-prefix-cmd](register-prefix-cmd.md): prepare a prefix registration command
 
+[register-prefix-remote](register-prefix-remote.md): send prefix registration commands to a specified remote face
+
 [serve-certs](serve-certs.md): serve certificates
 
 [unix-time-service](unix-time-service.md): answers queries of current Unix timestamp

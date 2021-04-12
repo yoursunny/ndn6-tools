@@ -1,7 +1,9 @@
+.vscode
 facemon
 file-server
 prefix-allocate
 prefix-request
 register-prefix-cmd
+register-prefix-remote
 serve-certs
 unix-time-service

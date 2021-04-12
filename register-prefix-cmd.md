@@ -7,7 +7,9 @@ One use case is to generate a command on behalf of a less powerful sensor device
 
 On a server, execute:
 
-    ./register-prefix-cmd -p /com/example/user/sensor1 -C -i /com/example/user
+```bash
+./register-prefix-cmd -p /com/example/user/sensor1 -C -i /com/example/user
+```
 
 * `-p` specifies the prefix to be registered (required)
 * `-C` enables Capture flag
