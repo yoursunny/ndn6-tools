@@ -2,7 +2,8 @@ CXX ?= g++
 CXXFLAGS ?= -std=c++14 -Wall -Werror `pkg-config --cflags libndn-cxx`
 LDFLAGS ?=
 LIBS ?= `pkg-config --libs libndn-cxx`
-DESTDIR ?= /usr/local
+PREFIX ?= /usr/local
+DESTDIR ?=
 
 PROGRAMS = \
 	facemon \
@@ -23,20 +24,10 @@ clean:
 	rm -f $(PROGRAMS)
 
 install: all
-	install -d -m0755 $(DESTDIR)/bin
-	sh -c 'for P in $(PROGRAMS); do install $$P $(DESTDIR)/bin/ndn6-$$P; done'
+	install -d -m0755 $(DESTDIR)$(PREFIX)/bin $(DESTDIR)$(PREFIX)/lib/systemd/system
+	sh -c 'for P in $(PROGRAMS); do install $$P $(DESTDIR)$(PREFIX)/bin/ndn6-$$P; done'
+	install -m0644 -T serve-certs.service $(DESTDIR)$(PREFIX)/lib/systemd/system/ndn6-serve-certs.service
 
 uninstall:
-	sh -c 'for P in $(PROGRAMS); do rm -f $(DESTDIR)/bin/ndn6-$$P; done'
-
-install-serve-certs-service: serve-certs
-	install -d -m0755 /usr/local/lib/systemd/system
-	install -m0644 -T serve-certs.service /usr/local/lib/systemd/system/ndn6-serve-certs.service
-	install -d -m0755 -ondn -gndn /var/lib/ndn/serve-certs
-	systemctl daemon-reload
-
-uninstall-serve-certs-service:
-	systemctl disable ndn6-serve-certs || true
-	systemctl stop ndn6-serve-certs || true
-	rm /usr/local/lib/systemd/system/ndn6-serve-certs.service
-	systemctl daemon-reload
+	sh -c 'for P in $(PROGRAMS); do rm -f $(DESTDIR)$(PREFIX)/bin/ndn6-$$P; done'
+	rm -f $(DESTDIR)$(PREFIX)/lib/systemd/system/ndn6-serve-certs.service

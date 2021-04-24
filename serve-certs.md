@@ -16,8 +16,8 @@ ndn6-serve-certs /path/to/*.ndncert
 This tool can run as a systemd service.
 
 ```bash
-# install the service unit
-sudo make install-serve-certs-service
+# create the directory
+sudo install -d -m0755 -ondn -gndn /var/lib/ndn/serve-certs
 
 # add a certificate
 ndnsec cert-dump -i /U | sudo -u ndn tee /var/lib/ndn/serve-certs/U.ndncert >/dev/null
@@ -31,8 +31,4 @@ sudo systemctl restart ndn6-serve-certs
 
 # make the service autostart with the system
 sudo systemctl enable ndn6-serve-certs
-
-# uninstall the service unit
-# (you can manually delete /var/lib/ndn/serve-certs folder)
-sudo make uninstall-serve-certs-service
 ```

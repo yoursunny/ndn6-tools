@@ -1,0 +1,26 @@
+#!/bin/bash
+
+if [[ "$1" != "configure" ]]; then
+  exit 0
+fi
+
+if ! getent group ndn >/dev/null; then
+  addgroup --system ndn >/dev/null
+fi
+
+if ! getent passwd ndn >/dev/null; then
+adduser \
+  --system \
+  --disabled-login \
+  --ingroup ndn \
+  --home /nonexistent \
+  --gecos "NDN User" \
+  --shell /bin/false \
+  ndn >/dev/null
+fi
+
+install -d -m0755 -ondn -gndn /var/lib/ndn/serve-certs
+
+#DEBHELPER#
+
+exit 0
