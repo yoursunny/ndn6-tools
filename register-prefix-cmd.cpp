@@ -1,5 +1,5 @@
 #include <ndn-cxx/mgmt/nfd/controller.hpp>
-#include <ndn-cxx/security/command-interest-signer.hpp>
+#include <ndn-cxx/security/interest-signer.hpp>
 #include <ndn-cxx/security/signing-helpers.hpp>
 #include <ndn-cxx/util/time-unit-test-clock.hpp>
 
@@ -89,7 +89,7 @@ main(int argc, char** argv)
   }
 
   KeyChain keyChain;
-  security::CommandInterestSigner cis(keyChain);
+  security::InterestSigner cis(keyChain);
   Interest interest = cis.makeCommandInterest(command->getRequestName(commandPrefix, params), si);
 
   Block wire = interest.wireEncode();

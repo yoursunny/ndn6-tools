@@ -1,6 +1,6 @@
 #include <ndn-cxx/mgmt/nfd/controller.hpp>
 #include <ndn-cxx/lp/tags.hpp>
-#include <ndn-cxx/security/command-interest-signer.hpp>
+#include <ndn-cxx/security/interest-signer.hpp>
 #include <ndn-cxx/security/signing-helpers.hpp>
 
 #include <boost/program_options/options_description.hpp>
@@ -16,7 +16,7 @@ static Face face;
 static Scheduler sched(face.getIoService());
 static KeyChain keyChain;
 static nfd::Controller controller(face, keyChain);
-static security::CommandInterestSigner cis(keyChain);
+static security::InterestSigner cis(keyChain);
 static security::SigningInfo si;
 
 static std::string faceUri;
