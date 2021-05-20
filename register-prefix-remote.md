@@ -7,6 +7,9 @@ This enables two use cases:
 * The local node can accept registrations from others at `/localhop/nfd` prefix, and still use this tool to send registrations to specified remote node(s).
 * The local node can connect to multiple remote nodes, and send different registrations to each remote node.
 
+This tool can also send prefix unregistration commands.
+The main use case is unsetting the automatic `/ndn/broadcast` prefix so that broadcast Interests do not reach the local node.
+
 ## Usage
 
 ```bash
@@ -16,5 +19,5 @@ This enables two use cases:
 ```
 
 * `-f` specifies remote FaceUri (required)
-* `-p` specifies the prefix to be registered (required)
+* `-p` specifies the prefix to be registered
 * `-i` specifies signing identity (optional)

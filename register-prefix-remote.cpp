@@ -23,8 +23,9 @@ static std::string faceUri;
 static std::shared_ptr<lp::NextHopFaceIdTag> nexthopTag;
 
 static Name commandPrefix("/localhop/nfd");
-static nfd::RibRegisterCommand command;
-static std::vector<nfd::ControlParameters> commandParams;
+static nfd::RibRegisterCommand ribRegister;
+static nfd::RibUnregisterCommand ribUnregister;
+static std::vector<std::tuple<const char*, const nfd::ControlCommand*, nfd::ControlParameters>> commands;
 static size_t commandPos = 0;
 
 namespace po = boost::program_options;
@@ -40,14 +41,14 @@ usage(std::ostream& os, const po::options_description& options)
 }
 
 static void
-enableLocalFields(const std::function<void()>& cont)
+enableLocalFields(const std::function<void()>& then)
 {
   controller.start<nfd::FaceUpdateCommand>(
     nfd::ControlParameters()
       .setFlagBit(nfd::FaceFlagBit::BIT_LOCAL_FIELDS_ENABLED, true),
     [&] (const auto& cp) {
       std::cerr << "EnableLocalFields OK" << std::endl;
-      cont();
+      then();
     },
     [] (const auto& cr) {
       std::cerr << "EnableLocalFields error " << cr << std::endl;
@@ -82,33 +83,42 @@ updateNexthop()
 }
 
 static void
-sendRegisterCommand()
+sendOneCommand()
 {
   if (nexthopTag == nullptr) {
-    sched.schedule(5_s, sendRegisterCommand);
+    sched.schedule(5_s, sendOneCommand);
+    return;
+  }
+  if (commandPos >= commands.size()) {
+    commandPos = 0;
+    sched.schedule(180_s, sendOneCommand);
     return;
   }
 
-  auto param = commandParams.at(commandPos);
+  const char* verb = nullptr;
+  const nfd::ControlCommand* command = nullptr;
+  nfd::ControlParameters param;
+  std::tie(verb, command, param) = commands.at(commandPos);
   ++commandPos;
-  if (commandPos >= commandParams.size()) {
-    sched.schedule(180_s, sendRegisterCommand);
-    commandPos = 0;
-  } else {
-    sched.schedule(5_s, sendRegisterCommand);
-  }
+  sched.schedule(5_s, sendOneCommand);
 
-  auto interest = cis.makeCommandInterest(command.getRequestName(commandPrefix, param), si);
+  auto interest = cis.makeCommandInterest(command->getRequestName(commandPrefix, param), si);
   interest.setTag(nexthopTag);
   face.expressInterest(interest,
-    [=] (const Interest&, const Data&) {
-      std::cerr << "RibRegister " << param.getName() << " OK" << std::endl;
+    [=] (const Interest&, const Data& data) {
+      try {
+        nfd::ControlResponse response;
+        response.wireDecode(data.getContent().blockFromValue());
+        std::cerr << verb << " " << param.getName() << " " << response.getCode() << std::endl;
+      } catch (const tlv::Error&) {
+        std::cerr << verb << " " << param.getName() << " bad-response" << std::endl;
+      }
     },
-    [=] (const Interest&, const lp::Nack&) {
-      std::cerr << "RibRegister " << param.getName() << " Nack" << std::endl;
+    [=] (const Interest&, const lp::Nack& nack) {
+      std::cerr << verb << " " << param.getName() << " Nack~" << nack.getReason() << std::endl;
     },
     [=] (const Interest&) {
-      std::cerr << "RibRegister " << param.getName() << " timeout" << std::endl;
+      std::cerr << verb << " " << param.getName() << " timeout" << std::endl;
     });
 }
 
@@ -119,11 +129,12 @@ main(int argc, char** argv)
   options.add_options()
     ("help,h", "print help message")
     ("face,f", po::value<std::string>(&faceUri)->required(), "remote FaceUri")
-    ("prefix,p", po::value<std::vector<Name>>()->required()->composing(), "prefix (repeatable)")
-    ("origin,o", po::value<int>()->default_value(0), "origin")
+    ("prefix,p", po::value<std::vector<Name>>()->composing(), "register prefixes")
+    ("origin,o", po::value<int>()->default_value(nfd::ROUTE_ORIGIN_CLIENT), "origin")
     ("cost,c", po::value<int>()->default_value(0), "cost")
-    ("no-inherit,I", "unset ChildInherit flag")
-    ("capture,C", "set Capture flag")
+    ("no-inherit", "unset ChildInherit flag")
+    ("capture", "set Capture flag")
+    ("undo-autoreg", po::value<std::vector<Name>>()->composing(), "unregister autoreg prefixes")
     ("identity,i", po::value<Name>(), "signing identity")
     ;
   po::variables_map vm;
@@ -142,20 +153,35 @@ main(int argc, char** argv)
   if (vm.count("identity") > 0) {
     si = signingByIdentity(vm["identity"].as<Name>());
   }
-  for (const Name& prefix : vm["prefix"].as<std::vector<Name>>()) {
-    commandParams.push_back(
-      nfd::ControlParameters()
-        .setName(prefix)
-        .setOrigin(static_cast<nfd::RouteOrigin>(vm["origin"].as<int>()))
-        .setCost(vm["cost"].as<int>())
-        .setFlagBit(nfd::ROUTE_FLAG_CHILD_INHERIT, vm.count("no-inherit") == 0, false)
-        .setFlagBit(nfd::ROUTE_FLAG_CAPTURE, vm.count("capture") > 0, false)
-    );
+  if (vm.count("undo-autoreg") > 0) {
+    for (const Name& prefix : vm["undo-autoreg"].as<std::vector<Name>>()) {
+      commands.emplace_back(
+        "RibUnregister",
+        &ribUnregister,
+        nfd::ControlParameters()
+          .setName(prefix)
+          .setOrigin(nfd::ROUTE_ORIGIN_AUTOREG)
+      );
+    }
+  }
+  if (vm.count("prefix") > 0) {
+    for (const Name& prefix : vm["prefix"].as<std::vector<Name>>()) {
+      commands.emplace_back(
+        "RibRegister",
+        &ribRegister,
+        nfd::ControlParameters()
+          .setName(prefix)
+          .setOrigin(static_cast<nfd::RouteOrigin>(vm["origin"].as<int>()))
+          .setCost(vm["cost"].as<int>())
+          .setFlagBit(nfd::ROUTE_FLAG_CHILD_INHERIT, vm.count("no-inherit") == 0, false)
+          .setFlagBit(nfd::ROUTE_FLAG_CAPTURE, vm.count("capture") > 0, false)
+      );
+    }
   }
 
   enableLocalFields([] {
     updateNexthop();
-    sendRegisterCommand();
+    sendOneCommand();
   });
   face.processEvents();
   return 0;
