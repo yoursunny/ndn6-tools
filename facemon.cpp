@@ -25,19 +25,17 @@ printNotification(const nfd::FaceEventNotification& n)
 {
   std::cout << ::time(0) << '\t';
   switch (n.getKind()) {
-  case nfd::FACE_EVENT_CREATED:
-    std::cout << "CREATED";
-    break;
-  case nfd::FACE_EVENT_DESTROYED:
-    std::cout << "DESTROYED";
-    break;
-  default:
-    std::cout << "-";
-    break;
+    case nfd::FACE_EVENT_CREATED:
+      std::cout << "CREATED";
+      break;
+    case nfd::FACE_EVENT_DESTROYED:
+      std::cout << "DESTROYED";
+      break;
+    default:
+      std::cout << "-";
+      break;
   }
-  std::cout << '\t' << n.getFaceId()
-            << '\t' << n.getRemoteUri()
-            << '\t' << n.getLocalUri()
+  std::cout << '\t' << n.getFaceId() << '\t' << n.getRemoteUri() << '\t' << n.getLocalUri()
             << std::endl;
 }
 

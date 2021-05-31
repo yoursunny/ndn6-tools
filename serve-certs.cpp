@@ -8,25 +8,22 @@ namespace serve_certs {
 class ServeCerts : boost::noncopyable
 {
 public:
-  explicit
-  ServeCerts(Face& face)
+  explicit ServeCerts(Face& face)
     : m_face(face)
-  {
-  }
+  {}
 
-  void
-  add(std::shared_ptr<Data> data)
+  void add(std::shared_ptr<Data> data)
   {
     Name prefix = data->getName().getPrefix(-2); // omit IssuerId and Version components
     std::cout << "<R\t" << prefix << std::endl;
-    m_face.setInterestFilter(prefix,
-      [this, data] (const Name&, const Interest& interest) {
+    m_face.setInterestFilter(
+      prefix,
+      [this, data](const Name&, const Interest& interest) {
         std::cout << ">I\t" << interest << std::endl;
         if (interest.matchesData(*data)) {
           std::cout << "<D\t" << data->getName() << std::endl;
           m_face.put(*data);
-        }
-        else {
+        } else {
           auto nack = Nack(interest).setReason(lp::NackReason::NO_ROUTE);
           std::cout << "<N\t" << interest << '~' << nack.getReason() << std::endl;
           m_face.put(nack);

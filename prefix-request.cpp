@@ -10,26 +10,23 @@ static const int CODE_WRONG_ANSWER = 8401;
 class PrefixRequest : boost::noncopyable
 {
 public:
-  explicit
-  PrefixRequest(const std::string& secret)
+  explicit PrefixRequest(const std::string& secret)
     : m_controller(m_face, m_keyChain)
     , m_secret(secret)
-  {
-  }
+  {}
 
-  void
-  run()
+  void run()
   {
     enableLocalFields(m_controller);
     m_face.setInterestFilter("/localhop/prefix-request",
-      std::bind(&PrefixRequest::processCommand, this, _2), abortOnRegisterFail);
+                             std::bind(&PrefixRequest::processCommand, this, _2),
+                             abortOnRegisterFail);
 
     m_face.processEvents();
   }
 
 private:
-  void
-  processCommand(const Interest& interest)
+  void processCommand(const Interest& interest)
   {
     // /localhop/prefix-request/<prefix-uri>/<answer>/<random>
     // <answer> == SHA256(<secret> <prefix-uri>) in upper case
@@ -45,8 +42,7 @@ private:
     Name prefix;
     try {
       prefix = Name(prefixUri);
-    }
-    catch (const Name::Error&) {
+    } catch (const Name::Error&) {
       return; // cannot decode Name
     }
     if (prefix.toUri() != prefixUri) {
@@ -66,20 +62,17 @@ private:
 
     // verify answer
     if (!verifyAnswer(interest)) {
-      std::cout << ::time(nullptr) << '\t'
-                << CODE_WRONG_ANSWER << '\t'
-                << p.getFaceId() << '\t'
+      std::cout << ::time(nullptr) << '\t' << CODE_WRONG_ANSWER << '\t' << p.getFaceId() << '\t'
                 << p.getName() << std::endl;
       return;
     }
 
-    m_controller.start<nfd::RibRegisterCommand>(p,
-      bind(&PrefixRequest::onRegisterSucceed, this, _1, interest),
+    m_controller.start<nfd::RibRegisterCommand>(
+      p, bind(&PrefixRequest::onRegisterSucceed, this, _1, interest),
       bind(&PrefixRequest::onRegisterFail, this, p, _1));
   }
 
-  bool
-  verifyAnswer(const Interest& interest)
+  bool verifyAnswer(const Interest& interest)
   {
     const auto& prefixUriArg = interest.getName().at(2);
 
@@ -102,26 +95,20 @@ private:
     return diff == 0;
   }
 
-  void
-  onRegisterSucceed(const nfd::ControlParameters& p, const Interest& interest)
+  void onRegisterSucceed(const nfd::ControlParameters& p, const Interest& interest)
   {
     auto data = std::make_shared<Data>(interest.getName());
     data->setContent(p.getName().wireEncode());
     m_keyChain.sign(*data);
     m_face.put(*data);
 
-    std::cout << ::time(nullptr) << '\t'
-              << 0 << '\t'
-              << p.getFaceId() << '\t'
-              << p.getName() << std::endl;
+    std::cout << ::time(nullptr) << '\t' << 0 << '\t' << p.getFaceId() << '\t' << p.getName()
+              << std::endl;
   }
 
-  void
-  onRegisterFail(const nfd::ControlParameters& p, const nfd::ControlResponse& resp)
+  void onRegisterFail(const nfd::ControlParameters& p, const nfd::ControlResponse& resp)
   {
-    std::cout << ::time(nullptr) << '\t'
-              << resp.getCode() << '\t'
-              << p.getFaceId() << '\t'
+    std::cout << ::time(nullptr) << '\t' << resp.getCode() << '\t' << p.getFaceId() << '\t'
               << p.getName() << std::endl;
   }
 

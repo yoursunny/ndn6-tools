@@ -10,7 +10,10 @@ jobs:
     steps:
       - run: |
           sudo add-apt-repository ppa:named-data/ppa
-          sudo apt-get install libndn-cxx-dev
+          sudo apt-get install clang-format-8 libndn-cxx-dev
       - checkout
+      - run: |
+          make lint
+          [[ $(git status --porcelain | tee /dev/stderr | wc -l) -eq 0 ]]
       - run: make
       - run: sudo make install

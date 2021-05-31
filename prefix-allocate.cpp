@@ -8,25 +8,22 @@ static const int ORIGIN_ALLOCATE = 22804;
 class PrefixAllocate : boost::noncopyable
 {
 public:
-  explicit
-  PrefixAllocate(const Name& prefix)
+  explicit PrefixAllocate(const Name& prefix)
     : m_controller(m_face, m_keyChain)
     , m_prefix(prefix)
-  {
-  }
+  {}
 
-  void
-  run()
+  void run()
   {
     enableLocalFields(m_controller);
     m_face.setInterestFilter("/localhop/prefix-allocate",
-      std::bind(&PrefixAllocate::processCommand, this, _2), abortOnRegisterFail);
+                             std::bind(&PrefixAllocate::processCommand, this, _2),
+                             abortOnRegisterFail);
     m_face.processEvents();
   }
 
 private:
-  void
-  processCommand(const Interest& interest)
+  void processCommand(const Interest& interest)
   {
     auto incomingFaceIdTag = interest.getTag<lp::IncomingFaceIdTag>();
     if (incomingFaceIdTag == nullptr) {
@@ -34,8 +31,7 @@ private:
     }
 
     char suffix[30];
-    snprintf(suffix, sizeof(suffix), "%d_%d",
-             static_cast<int>(::time(nullptr)),
+    snprintf(suffix, sizeof(suffix), "%d_%d", static_cast<int>(::time(nullptr)),
              static_cast<int>(*incomingFaceIdTag));
     Name prefix(m_prefix);
     prefix.append(suffix);
@@ -45,31 +41,25 @@ private:
     p.setFaceId(*incomingFaceIdTag);
     p.setOrigin(static_cast<nfd::RouteOrigin>(ORIGIN_ALLOCATE));
     p.setCost(800);
-    m_controller.start<nfd::RibRegisterCommand>(p,
-      bind(&PrefixAllocate::onRegisterSucceed, this, _1, interest),
+    m_controller.start<nfd::RibRegisterCommand>(
+      p, bind(&PrefixAllocate::onRegisterSucceed, this, _1, interest),
       bind(&PrefixAllocate::onRegisterFail, this, p, _1));
   }
 
-  void
-  onRegisterSucceed(const nfd::ControlParameters& p, const Interest& interest)
+  void onRegisterSucceed(const nfd::ControlParameters& p, const Interest& interest)
   {
     auto data = std::make_shared<Data>(interest.getName());
     data->setContent(p.getName().wireEncode());
     m_keyChain.sign(*data);
     m_face.put(*data);
 
-    std::cout << ::time(nullptr) << '\t'
-              << 0 << '\t'
-              << p.getFaceId() << '\t'
-              << p.getName() << std::endl;
+    std::cout << ::time(nullptr) << '\t' << 0 << '\t' << p.getFaceId() << '\t' << p.getName()
+              << std::endl;
   }
 
-  void
-  onRegisterFail(const nfd::ControlParameters& p, const nfd::ControlResponse& resp)
+  void onRegisterFail(const nfd::ControlParameters& p, const nfd::ControlResponse& resp)
   {
-    std::cout << ::time(nullptr) << '\t'
-              << resp.getCode() << '\t'
-              << p.getFaceId() << '\t'
+    std::cout << ::time(nullptr) << '\t' << resp.getCode() << '\t' << p.getFaceId() << '\t'
               << p.getName() << std::endl;
   }
 

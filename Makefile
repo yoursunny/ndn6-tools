@@ -17,8 +17,11 @@ PROGRAMS = \
 
 all: $(PROGRAMS)
 
-%: %.cpp
+%: %.cpp *.hpp
 	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
+
+lint:
+	clang-format-8 -i -style=file *.hpp *.cpp
 
 clean:
 	rm -f $(PROGRAMS)

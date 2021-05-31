@@ -12,8 +12,9 @@ main()
   Face face;
   KeyChain keyChain;
   Name prefix = "/localhop/unix-time";
-  face.setInterestFilter(InterestFilter(prefix, "<>{0}"),
-    [&] (const auto&, const Interest& interest) {
+  face.setInterestFilter(
+    InterestFilter(prefix, "<>{0}"),
+    [&](const auto&, const Interest& interest) {
       if (!interest.getCanBePrefix() || !interest.getMustBeFresh()) {
         return;
       }

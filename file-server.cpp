@@ -17,35 +17,31 @@ static const uint64_t SEGMENT_SIZE = 5120;
 class FileServer : boost::noncopyable
 {
 public:
-  explicit
-  FileServer(Face& face, KeyChain& keyChain, const Name& prefix, const fs::path& directory)
+  explicit FileServer(Face& face, KeyChain& keyChain, const Name& prefix, const fs::path& directory)
     : m_face(face)
     , m_keyChain(keyChain)
     , m_prefix(prefix)
     , m_directory(directory)
   {
-    face.registerPrefix(prefix,
-      [] (const Name&) {},
-      [] (const Name&, const std::string& err) {
+    face.registerPrefix(
+      prefix, [](const Name&) {},
+      [](const Name&, const std::string& err) {
         std::cerr << "REGISTER-PREFIX-ERR\t" << err << std::endl;
         std::exit(3);
       });
 
-    face.setInterestFilter(
-      InterestFilter(prefix, "[^<32=ls>]*<32=metadata>"),
-      std::bind(&FileServer::readRdr, this, _2));
+    face.setInterestFilter(InterestFilter(prefix, "[^<32=ls>]*<32=metadata>"),
+                           std::bind(&FileServer::readRdr, this, _2));
 
-    face.setInterestFilter(
-      InterestFilter(prefix, "[^<32=ls><32=metadata>]{2,}"),
-      std::bind(&FileServer::readSegment, this, _2));
+    face.setInterestFilter(InterestFilter(prefix, "[^<32=ls><32=metadata>]{2,}"),
+                           std::bind(&FileServer::readSegment, this, _2));
   }
 
 private:
-  std::tuple<fs::path, Name>
-  parseRead(const Name& interestName, int suffixLen)
+  std::tuple<fs::path, Name> parseRead(const Name& interestName, int suffixLen)
   {
-    auto rel = interestName.getSubName(m_prefix.size(),
-                                       interestName.size() - m_prefix.size() - suffixLen);
+    auto rel =
+      interestName.getSubName(m_prefix.size(), interestName.size() - m_prefix.size() - suffixLen);
     fs::path path = m_directory / fs::path(rel.toUri());
 
     fs::file_status stat = fs::status(path);
@@ -61,8 +57,7 @@ private:
     return std::make_tuple(path, versioned);
   }
 
-  void
-  readRdr(const Interest& interest)
+  void readRdr(const Interest& interest)
   {
     const Name& name = interest.getName();
     fs::path path;
@@ -81,8 +76,7 @@ private:
     std::cerr << "READ-RDR\t" << path << '\t' << versioned << std::endl;
   }
 
-  void
-  readSegment(const Interest& interest)
+  void readSegment(const Interest& interest)
   {
     const Name& name = interest.getName();
     fs::path path;
@@ -105,8 +99,8 @@ private:
     fs::ifstream stream(path);
     stream.seekg(segment * SEGMENT_SIZE);
     char buf[SEGMENT_SIZE];
-    uint64_t segLen = segment == lastSeg && size % SEGMENT_SIZE != 0 ?
-                      size % SEGMENT_SIZE : SEGMENT_SIZE;
+    uint64_t segLen =
+      segment == lastSeg && size % SEGMENT_SIZE != 0 ? size % SEGMENT_SIZE : SEGMENT_SIZE;
     stream.read(buf, segLen);
 
     Data data(name);
@@ -117,8 +111,7 @@ private:
     std::cerr << "READ-SEGMENT\t" << path << '\t' << segment << '\t' << segLen << std::endl;
   }
 
-  void
-  replyNack(const Interest& interest)
+  void replyNack(const Interest& interest)
   {
     Data data(interest.getName());
     data.setContentType(tlv::ContentType_Nack);

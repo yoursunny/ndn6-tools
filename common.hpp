@@ -12,8 +12,8 @@
 #include <ndn-cxx/util/time.hpp>
 
 #include <boost/program_options/options_description.hpp>
-#include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
+#include <boost/program_options/variables_map.hpp>
 
 #include <cstdio>
 #include <iostream>
@@ -33,14 +33,14 @@ namespace time = ndn::time;
 namespace po = boost::program_options;
 
 using ndn::Block;
-using ndn::Name;
-using ndn::Interest;
 using ndn::Data;
+using ndn::Interest;
+using ndn::Name;
 using ndn::lp::Nack;
 
-using ndn::Scheduler;
 using ndn::Face;
 using ndn::InterestFilter;
+using ndn::Scheduler;
 
 using ndn::KeyChain;
 using ndn::security::Certificate;
@@ -51,15 +51,14 @@ inline void
 enableLocalFields(ndn::nfd::Controller& controller, const std::function<void()>& then = nullptr)
 {
   controller.start<ndn::nfd::FaceUpdateCommand>(
-    ndn::nfd::ControlParameters()
-      .setFlagBit(ndn::nfd::FaceFlagBit::BIT_LOCAL_FIELDS_ENABLED, true),
-    [&] (const auto& cp) {
+    ndn::nfd::ControlParameters().setFlagBit(ndn::nfd::FaceFlagBit::BIT_LOCAL_FIELDS_ENABLED, true),
+    [&](const auto& cp) {
       std::cerr << "EnableLocalFields OK" << std::endl;
       if (then != nullptr) {
         then();
       }
     },
-    [] (const auto& cr) {
+    [](const auto& cr) {
       std::cerr << "EnableLocalFields error " << cr << std::endl;
       std::exit(1);
     });
