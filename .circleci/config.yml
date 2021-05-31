@@ -1,6 +1,18 @@
 version: 2.1
+
+commands:
+  do-build:
+    steps:
+      - run: sudo apt-get install --no-install-recommends clang-format-8 libndn-cxx-dev
+      - checkout
+      - run: |
+          make lint
+          [[ $(git status --porcelain | tee /dev/stderr | wc -l) -eq 0 ]]
+      - run: make
+      - run: sudo make install
+
 jobs:
-  build:
+  build-ppa:
     docker:
       - image: cimg/base:stable-18.04
         auth:
@@ -8,12 +20,24 @@ jobs:
           password: $DOCKERHUB_TOKEN
     resource_class: small
     steps:
+      - run: sudo add-apt-repository ppa:named-data/ppa
+      - do-build
+  build-nightly:
+    docker:
+      - image: cimg/base:stable-20.04
+        auth:
+          username: $DOCKERHUB_USER
+          password: $DOCKERHUB_TOKEN
+    resource_class: small
+    steps:
       - run: |
-          sudo add-apt-repository ppa:named-data/ppa
-          sudo apt-get install clang-format-8 libndn-cxx-dev
-      - checkout
-      - run: |
-          make lint
-          [[ $(git status --porcelain | tee /dev/stderr | wc -l) -eq 0 ]]
-      - run: make
-      - run: sudo make install
+          echo "deb [trusted=yes] https://nfd-nightly-apt.ndn.today/ubuntu focal main" \
+            | sudo tee /etc/apt/sources.list.d/nfd-nightly.list
+          sudo apt-get update
+      - do-build
+
+workflows:
+  build:
+    jobs:
+      - build-ppa
+      - build-nightly
