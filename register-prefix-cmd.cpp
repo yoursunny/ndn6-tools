@@ -1,18 +1,9 @@
-#include <ndn-cxx/mgmt/nfd/controller.hpp>
-#include <ndn-cxx/security/interest-signer.hpp>
-#include <ndn-cxx/security/signing-helpers.hpp>
+#include "common.hpp"
+
 #include <ndn-cxx/util/time-unit-test-clock.hpp>
 
-#include <boost/program_options/options_description.hpp>
-#include <boost/program_options/variables_map.hpp>
-#include <boost/program_options/parsers.hpp>
-
-#include <iostream>
-
-namespace ndn {
+namespace ndn6 {
 namespace register_prefix_cmd {
-
-namespace po = boost::program_options;
 
 static void
 usage(std::ostream& os, const po::options_description& options)
@@ -31,7 +22,7 @@ main(int argc, char** argv)
   Name commandPrefix("/localhop/nfd");
   int faceId = -1;
   int origin = 0;
-  security::SigningInfo si;
+  SigningInfo si;
   int advanceClock = 0;
 
   po::options_description options("Options");
@@ -64,8 +55,8 @@ main(int argc, char** argv)
     si = signingByIdentity(vm["identity"].as<Name>());
   }
   if (advanceClock > 0) {
-    time::system_clock::TimePoint now = time::system_clock::now();
-    auto clock = make_shared<time::UnitTestSystemClock>();
+    auto now = time::system_clock::now();
+    auto clock = std::make_shared<time::UnitTestSystemClock>();
     clock->setNow(now.time_since_epoch() + time::milliseconds(advanceClock));
     time::setCustomClocks(nullptr, clock);
   }
@@ -76,12 +67,12 @@ main(int argc, char** argv)
     params.setFaceId(faceId);
   }
   params.setOrigin(static_cast<nfd::RouteOrigin>(origin));
-  unique_ptr<nfd::ControlCommand> command;
+  std::unique_ptr<nfd::ControlCommand> command;
   if (vm.count("unregister") > 0) {
-    command = make_unique<nfd::RibUnregisterCommand>();
+    command = std::make_unique<nfd::RibUnregisterCommand>();
   }
   else {
-    command = make_unique<nfd::RibRegisterCommand>();
+    command = std::make_unique<nfd::RibRegisterCommand>();
     params.setFlags(
       (vm.count("no-inherit") > 0 ? 0 : nfd::ROUTE_FLAG_CHILD_INHERIT) |
       (vm.count("capture") > 0 ? nfd::ROUTE_FLAG_CAPTURE : 0)
@@ -89,7 +80,7 @@ main(int argc, char** argv)
   }
 
   KeyChain keyChain;
-  security::InterestSigner cis(keyChain);
+  InterestSigner cis(keyChain);
   Interest interest = cis.makeCommandInterest(command->getRequestName(commandPrefix, params), si);
 
   Block wire = interest.wireEncode();
@@ -98,10 +89,10 @@ main(int argc, char** argv)
 }
 
 } // namespace register_prefix_cmd
-} // namespace ndn
+} // namespace ndn6
 
 int
 main(int argc, char** argv)
 {
-  return ndn::register_prefix_cmd::main(argc, argv);
+  return ndn6::register_prefix_cmd::main(argc, argv);
 }

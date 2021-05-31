@@ -1,34 +1,29 @@
-#include <ndn-cxx/mgmt/nfd/controller.hpp>
+#include "common.hpp"
+
 #include <ndn-cxx/lp/tags.hpp>
-#include <ndn-cxx/security/interest-signer.hpp>
-#include <ndn-cxx/security/signing-helpers.hpp>
 
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
 
-#include <iostream>
-
-namespace ndn {
-namespace register_prefix_directed {
+namespace ndn6 {
+namespace register_prefix_remote {
 
 static Face face;
 static Scheduler sched(face.getIoService());
 static KeyChain keyChain;
 static nfd::Controller controller(face, keyChain);
-static security::InterestSigner cis(keyChain);
-static security::SigningInfo si;
+static InterestSigner cis(keyChain);
+static SigningInfo si;
 
 static std::string faceUri;
-static std::shared_ptr<lp::NextHopFaceIdTag> nexthopTag;
+static std::shared_ptr<ndn::lp::NextHopFaceIdTag> nexthopTag;
 
 static Name commandPrefix("/localhop/nfd");
 static nfd::RibRegisterCommand ribRegister;
 static nfd::RibUnregisterCommand ribUnregister;
 static std::vector<std::tuple<const char*, const nfd::ControlCommand*, nfd::ControlParameters>> commands;
 static size_t commandPos = 0;
-
-namespace po = boost::program_options;
 
 static void
 usage(std::ostream& os, const po::options_description& options)
@@ -38,22 +33,6 @@ usage(std::ostream& os, const po::options_description& options)
         "Register and keep prefixes on a remote router.\n"
         "\n"
      << options;
-}
-
-static void
-enableLocalFields(const std::function<void()>& then)
-{
-  controller.start<nfd::FaceUpdateCommand>(
-    nfd::ControlParameters()
-      .setFlagBit(nfd::FaceFlagBit::BIT_LOCAL_FIELDS_ENABLED, true),
-    [&] (const auto& cp) {
-      std::cerr << "EnableLocalFields OK" << std::endl;
-      then();
-    },
-    [] (const auto& cr) {
-      std::cerr << "EnableLocalFields error " << cr << std::endl;
-      std::exit(1);
-    });
 }
 
 static void
@@ -179,7 +158,7 @@ main(int argc, char** argv)
     }
   }
 
-  enableLocalFields([] {
+  enableLocalFields(controller, [] {
     updateNexthop();
     sendOneCommand();
   });
@@ -187,11 +166,11 @@ main(int argc, char** argv)
   return 0;
 }
 
-} // namespace register_prefix_directed
-} // namespace ndn
+} // namespace register_prefix_remote
+} // namespace ndn6
 
 int
 main(int argc, char** argv)
 {
-  return ndn::register_prefix_directed::main(argc, argv);
+  return ndn6::register_prefix_remote::main(argc, argv);
 }

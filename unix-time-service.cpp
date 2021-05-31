@@ -1,30 +1,37 @@
-#include <ndn-cxx/face.hpp>
-#include <ndn-cxx/security/key-chain.hpp>
+#include "common.hpp"
 
-#include <cstdlib>
-#include <iostream>
+namespace ndn6 {
+namespace unix_time_service {
+
+using ndn::MetaInfo;
 
 int
 main()
 {
-  ndn::name::setConventionEncoding(ndn::name::Convention::TYPED);
-  ndn::Face face;
-  ndn::KeyChain keyChain;
-  ndn::Name prefix = "/localhop/unix-time";
-  face.setInterestFilter(ndn::InterestFilter(prefix, "<>{0}"),
-    [&] (const auto&, const ndn::Interest& interest) {
+  name::setConventionEncoding(name::Convention::TYPED);
+  Face face;
+  KeyChain keyChain;
+  Name prefix = "/localhop/unix-time";
+  face.setInterestFilter(InterestFilter(prefix, "<>{0}"),
+    [&] (const auto&, const Interest& interest) {
       if (!interest.getCanBePrefix() || !interest.getMustBeFresh()) {
         return;
       }
-      ndn::Data data(ndn::Name(prefix).appendTimestamp());
-      data.setMetaInfo(ndn::MetaInfo().setFreshnessPeriod(ndn::time::milliseconds(1)));
+      Data data(Name(prefix).appendTimestamp());
+      data.setMetaInfo(MetaInfo().setFreshnessPeriod(1_ms));
       keyChain.sign(data);
       face.put(data);
     },
-    [] (const ndn::Name&, const std::string& err) {
-      std::cerr << err << std::endl;
-      std::exit(1);
-    });
+    abortOnRegisterFail);
   face.processEvents();
   return 0;
+}
+
+} // namespace unix_time_service
+} // namespace ndn6
+
+int
+main(int argc, char** argv)
+{
+  return ndn6::unix_time_service::main();
 }

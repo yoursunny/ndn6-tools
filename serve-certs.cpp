@@ -1,14 +1,11 @@
-#include <ndn-cxx/face.hpp>
+#include "common.hpp"
+
 #include <ndn-cxx/security/certificate.hpp>
-#include <ndn-cxx/util/io.hpp>
 
-#include <cstdlib>
-#include <iostream>
-
-namespace ndn {
+namespace ndn6 {
 namespace serve_certs {
 
-class ServeCerts : noncopyable
+class ServeCerts : boost::noncopyable
 {
 public:
   explicit
@@ -18,27 +15,24 @@ public:
   }
 
   void
-  add(shared_ptr<Data> data)
+  add(std::shared_ptr<Data> data)
   {
     Name prefix = data->getName().getPrefix(-2); // omit IssuerId and Version components
-    std::clog << "<R\t" << prefix << std::endl;
+    std::cout << "<R\t" << prefix << std::endl;
     m_face.setInterestFilter(prefix,
       [this, data] (const Name&, const Interest& interest) {
-        std::clog << ">I\t" << interest << std::endl;
+        std::cout << ">I\t" << interest << std::endl;
         if (interest.matchesData(*data)) {
-          std::clog << "<D\t" << data->getName() << std::endl;
+          std::cout << "<D\t" << data->getName() << std::endl;
           m_face.put(*data);
         }
         else {
-          auto nack = lp::Nack(interest).setReason(lp::NackReason::NO_ROUTE);
-          std::clog << "<N\t" << interest << '~' << nack.getReason() << std::endl;
+          auto nack = Nack(interest).setReason(lp::NackReason::NO_ROUTE);
+          std::cout << "<N\t" << interest << '~' << nack.getReason() << std::endl;
           m_face.put(nack);
         }
       },
-      [] (const Name& prefix, const std::string& err) {
-        std::cerr << "Unable to register " << prefix << ": " << err;
-        std::exit(3);
-      });
+      abortOnRegisterFail);
   }
 
 private:
@@ -57,7 +51,7 @@ main(int argc, char** argv)
   ServeCerts app(face);
 
   for (int i = 1; i < argc; ++i) {
-    app.add(io::load<security::v2::Certificate>(argv[i]));
+    app.add(io::load<Certificate>(argv[i]));
   }
 
   face.processEvents();
@@ -66,10 +60,10 @@ main(int argc, char** argv)
 }
 
 } // namespace serve_certs
-} // namespace ndn
+} // namespace ndn6
 
 int
 main(int argc, char** argv)
 {
-  return ndn::serve_certs::main(argc, argv);
+  return ndn6::serve_certs::main(argc, argv);
 }

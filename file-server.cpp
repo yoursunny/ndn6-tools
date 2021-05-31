@@ -1,19 +1,20 @@
-#include <ndn-cxx/face.hpp>
+#include "common.hpp"
+
 #include <ndn-cxx/metadata-object.hpp>
-#include <ndn-cxx/security/key-chain.hpp>
+
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include <cstdlib>
-#include <iostream>
 
-namespace ndn {
+namespace ndn6 {
 namespace file_server {
 
 namespace fs = boost::filesystem;
 
+using MetadataObject = ndn::MetadataObject;
+
 static const uint64_t SEGMENT_SIZE = 5120;
 
-class FileServer : noncopyable
+class FileServer : boost::noncopyable
 {
 public:
   explicit
@@ -43,8 +44,8 @@ private:
   std::tuple<fs::path, Name>
   parseRead(const Name& interestName, int suffixLen)
   {
-    PartialName rel = interestName.getSubName(m_prefix.size(),
-                      interestName.size() - m_prefix.size() - suffixLen);
+    auto rel = interestName.getSubName(m_prefix.size(),
+                                       interestName.size() - m_prefix.size() - suffixLen);
     fs::path path = m_directory / fs::path(rel.toUri());
 
     fs::file_status stat = fs::status(path);
@@ -149,11 +150,10 @@ main(int argc, char** argv)
 }
 
 } // namespace file_server
-} // namespace ndn
+} // namespace ndn6
 
 int
 main(int argc, char** argv)
 {
-  return ndn::file_server::main(argc, argv);
+  return ndn6::file_server::main(argc, argv);
 }
-

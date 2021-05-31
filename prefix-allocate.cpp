@@ -1,18 +1,11 @@
-#include <ndn-cxx/face.hpp>
-#include <ndn-cxx/lp/tags.hpp>
-#include <ndn-cxx/mgmt/nfd/controller.hpp>
+#include "common.hpp"
 
-#include <cstdio>
-#include <iostream>
-#include <time.h>
-
-namespace ndn {
+namespace ndn6 {
 namespace prefix_allocate {
 
-static const std::string TAB = "\t";
 static const int ORIGIN_ALLOCATE = 22804;
 
-class PrefixAllocate : noncopyable
+class PrefixAllocate : boost::noncopyable
 {
 public:
   explicit
@@ -25,14 +18,9 @@ public:
   void
   run()
   {
-    nfd::ControlParameters p1;
-    p1.setFlagBit(nfd::BIT_LOCAL_FIELDS_ENABLED, true);
-    m_controller.start<nfd::FaceUpdateCommand>(p1,
-      nullptr, std::bind(&std::exit, 1));
-
+    enableLocalFields(m_controller);
     m_face.setInterestFilter("/localhop/prefix-allocate",
-      bind(&PrefixAllocate::processCommand, this, _2), bind(&std::exit, 1));
-
+      std::bind(&PrefixAllocate::processCommand, this, _2), abortOnRegisterFail);
     m_face.processEvents();
   }
 
@@ -65,23 +53,23 @@ private:
   void
   onRegisterSucceed(const nfd::ControlParameters& p, const Interest& interest)
   {
-    shared_ptr<Data> data = make_shared<Data>(interest.getName());
+    auto data = std::make_shared<Data>(interest.getName());
     data->setContent(p.getName().wireEncode());
     m_keyChain.sign(*data);
     m_face.put(*data);
 
-    std::cout << ::time(nullptr) << TAB
-              << 0 << TAB
-              << p.getFaceId() << TAB
+    std::cout << ::time(nullptr) << '\t'
+              << 0 << '\t'
+              << p.getFaceId() << '\t'
               << p.getName() << std::endl;
   }
 
   void
   onRegisterFail(const nfd::ControlParameters& p, const nfd::ControlResponse& resp)
   {
-    std::cout << ::time(nullptr) << TAB
-              << resp.getCode() << TAB
-              << p.getFaceId() << TAB
+    std::cout << ::time(nullptr) << '\t'
+              << resp.getCode() << '\t'
+              << p.getFaceId() << '\t'
               << p.getName() << std::endl;
   }
 
@@ -107,10 +95,10 @@ main(int argc, char** argv)
 }
 
 } // namespace prefix_allocate
-} // namespace ndn
+} // namespace ndn6
 
 int
 main(int argc, char** argv)
 {
-  return ndn::prefix_allocate::main(argc, argv);
+  return ndn6::prefix_allocate::main(argc, argv);
 }
