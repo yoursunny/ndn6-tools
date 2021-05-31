@@ -13,6 +13,51 @@ namespace fs = boost::filesystem;
 using MetadataObject = ndn::MetadataObject;
 
 static const uint64_t SEGMENT_SIZE = 5120;
+static const ndn::PartialName lsSuffix("32=ls");
+#define ANY "[^<32=ls><32=metadata>]"
+
+class SegmentLimit
+{
+public:
+  static SegmentLimit parse(const Name& name, size_t size)
+  {
+    SegmentLimit sl;
+    if (size == 0) {
+      sl.ok = true;
+      return sl;
+    }
+
+    sl.segment = name[-1].toSegment();
+    sl.seekTo = sl.segment * SEGMENT_SIZE;
+    sl.lastSeg = size / SEGMENT_SIZE + static_cast<int>(size % SEGMENT_SIZE != 0) - 1;
+    sl.segLen =
+      sl.segment == sl.lastSeg && size % SEGMENT_SIZE != 0 ? size % SEGMENT_SIZE : SEGMENT_SIZE;
+    sl.ok = sl.segment <= sl.lastSeg;
+    return sl;
+  }
+
+public:
+  bool ok = false;
+  uint64_t segment = 0;
+  uint64_t seekTo = 0;
+  uint64_t segLen = 0;
+  uint64_t lastSeg = 0;
+};
+
+class FileInfo
+{
+public:
+  bool checkSegmentInterestName(const Name& name)
+  {
+    return versioned.isPrefixOf(name) && name[-1].isSegment();
+  }
+
+public:
+  bool isFile = false;
+  bool isDir = false;
+  fs::path path;
+  Name versioned;
+};
 
 class FileServer : boost::noncopyable
 {
@@ -23,97 +68,158 @@ public:
     , m_prefix(prefix)
     , m_directory(directory)
   {
-    face.registerPrefix(
-      prefix, [](const Name&) {},
-      [](const Name&, const std::string& err) {
-        std::cerr << "REGISTER-PREFIX-ERR\t" << err << std::endl;
-        std::exit(3);
-      });
-
-    face.setInterestFilter(InterestFilter(prefix, "[^<32=ls>]*<32=metadata>"),
-                           std::bind(&FileServer::readRdr, this, _2));
-
-    face.setInterestFilter(InterestFilter(prefix, "[^<32=ls><32=metadata>]{2,}"),
-                           std::bind(&FileServer::readSegment, this, _2));
+    face.registerPrefix(prefix, nullptr, abortOnRegisterFail);
+    face.setInterestFilter(InterestFilter(prefix, ANY "*<32=metadata>"),
+                           [this](const auto&, const auto& interest) { rdrFile(interest); });
+    face.setInterestFilter(InterestFilter(prefix, ANY "{2,}"),
+                           [this](const auto&, const auto& interest) { readFile(interest); });
+    face.setInterestFilter(InterestFilter(prefix, ANY "*<32=ls><32=metadata>"),
+                           [this](const auto&, const auto& interest) { rdrDir(interest); });
+    face.setInterestFilter(InterestFilter(prefix, ANY "*<32=ls>" ANY "{2}"),
+                           [this](const auto&, const auto& interest) { readDir(interest); });
   }
 
 private:
-  std::tuple<fs::path, Name> parseRead(const Name& interestName, int suffixLen)
+  FileInfo parseInterestName(const Name& name, int suffixLen,
+                             const ndn::PartialName& suffixInsert = ndn::PartialName())
   {
-    auto rel =
-      interestName.getSubName(m_prefix.size(), interestName.size() - m_prefix.size() - suffixLen);
-    fs::path path = m_directory / fs::path(rel.toUri());
+    FileInfo info;
 
-    fs::file_status stat = fs::status(path);
+    auto rel = name.getSubName(m_prefix.size(), name.size() - m_prefix.size() - suffixLen);
+    info.path = m_directory / fs::path(rel.toUri());
+
     boost::system::error_code ec;
-    std::time_t writeTime = fs::last_write_time(path, ec);
-
-    if (!fs::is_regular_file(stat) || ec) {
-      return std::make_tuple(path, Name());
+    fs::file_status stat = fs::status(info.path, ec);
+    if (ec) {
+      return info;
+    }
+    std::time_t writeTime = fs::last_write_time(info.path, ec);
+    if (ec) {
+      return info;
     }
 
-    Name versioned = interestName.getPrefix(-suffixLen);
-    versioned.appendVersion(writeTime * 1000000);
-    return std::make_tuple(path, versioned);
+    info.isFile = fs::is_regular_file(stat);
+    info.isDir = fs::is_directory(stat);
+    info.versioned =
+      name.getPrefix(-suffixLen).append(suffixInsert).appendVersion(writeTime * 1000000);
+    return info;
   }
 
-  void readRdr(const Interest& interest)
+  void rdrFile(const Interest& interest)
   {
-    const Name& name = interest.getName();
-    fs::path path;
-    Name versioned;
-    std::tie(path, versioned) = parseRead(name, 1);
-    if (versioned.empty()) {
-      replyNack(interest);
-      std::cerr << "READ-RDR-NOT-FOUND\t" << path << std::endl;
+    auto name = interest.getName();
+    auto info = parseInterestName(name, 1);
+    replyRdr("RDR-FILE", name, info, info.isFile);
+  }
+
+  void rdrDir(const Interest& interest)
+  {
+    auto name = interest.getName();
+    auto info = parseInterestName(name, 2, lsSuffix);
+    replyRdr("RDR-DIR", name, info, info.isDir);
+  }
+
+  void replyRdr(const char* act, const Name& name, const FileInfo& info, bool found)
+  {
+    if (!found) {
+      replyNack(name);
+      std::cout << act << "-NOT-FOUND" << '\t' << info.path << std::endl;
       return;
     }
 
     MetadataObject mo;
-    mo.setVersionedName(versioned);
-    Data data = mo.makeData(interest.getName(), m_keyChain);
+    mo.setVersionedName(info.versioned);
+    Data data = mo.makeData(name, m_keyChain);
     m_face.put(data);
-    std::cerr << "READ-RDR\t" << path << '\t' << versioned << std::endl;
+    std::cout << act << "-OK" << '\t' << info.path << '\t' << info.versioned << std::endl;
   }
 
-  void readSegment(const Interest& interest)
+  void readFile(const Interest& interest)
   {
-    const Name& name = interest.getName();
-    fs::path path;
-    Name versioned;
-    std::tie(path, versioned) = parseRead(name, 2);
-    if (versioned.empty() || !versioned.isPrefixOf(name) || !name[-1].isSegment()) {
-      replyNack(interest);
+    auto name = interest.getName();
+    auto info = parseInterestName(name, 2);
+    if (!info.isFile || !info.checkSegmentInterestName(name)) {
+      replyNack(name);
       return;
     }
 
-    uint64_t segment = name[-1].toSegment();
     boost::system::error_code ec;
-    uint64_t size = static_cast<uint64_t>(fs::file_size(path, ec));
-    uint64_t lastSeg = size / SEGMENT_SIZE + static_cast<int>(size % SEGMENT_SIZE != 0) - 1;
-    if (ec || segment > lastSeg) {
-      replyNack(interest);
+    uint64_t size = static_cast<uint64_t>(fs::file_size(info.path, ec));
+    if (ec) {
+      replyNack(name);
       return;
     }
 
-    fs::ifstream stream(path);
-    stream.seekg(segment * SEGMENT_SIZE);
+    auto sl = SegmentLimit::parse(name, size);
+    if (!sl.ok) {
+      replyNack(name);
+      return;
+    }
+
+    fs::ifstream stream(info.path);
+    replySegment("READ-FILE", name, info, sl, stream);
+  }
+
+  void readDir(const Interest& interest)
+  {
+    auto name = interest.getName();
+    auto info = parseInterestName(name, 3, lsSuffix);
+    if (!info.isDir || !info.checkSegmentInterestName(name)) {
+      replyNack(name);
+      return;
+    }
+
+    std::set<std::string> filenames;
+    try {
+      for (const auto& entry : fs::directory_iterator(info.path)) {
+        auto stat = entry.status();
+        if (fs::is_directory(stat)) {
+          filenames.insert(entry.path().filename().string() + "/");
+        } else if (fs::is_regular_file(stat)) {
+          filenames.insert(entry.path().filename().string());
+        }
+      }
+    } catch (const fs::filesystem_error& err) {
+      std::cout << "READ-DIR-ERROR" << '\t' << info.path << '\t' << err.what() << std::endl;
+      return;
+    }
+
+    std::stringstream stream;
+    for (const auto& filename : filenames) {
+      stream << filename << '\0';
+    }
+
+    auto sl = SegmentLimit::parse(name, stream.tellp());
+    if (!sl.ok) {
+      replyNack(name);
+      return;
+    }
+
+    replySegment("READ-DIR", name, info, sl, stream);
+  }
+
+  void replySegment(const char* act, const Name& name, const FileInfo& info, const SegmentLimit& sl,
+                    std::istream& stream)
+  {
+    stream.seekg(sl.seekTo);
     char buf[SEGMENT_SIZE];
-    uint64_t segLen =
-      segment == lastSeg && size % SEGMENT_SIZE != 0 ? size % SEGMENT_SIZE : SEGMENT_SIZE;
-    stream.read(buf, segLen);
+    stream.read(buf, sl.segLen);
+    if (!stream) {
+      std::cout << act << "-ERROR" << '\t' << info.path << '\t' << sl.segment << std::endl;
+      return;
+    }
 
     Data data(name);
-    data.setFinalBlock(name::Component::fromSegment(lastSeg));
-    data.setContent(reinterpret_cast<const uint8_t*>(buf), segLen);
+    data.setFinalBlock(name::Component::fromSegment(sl.lastSeg));
+    data.setContent(reinterpret_cast<const uint8_t*>(buf), sl.segLen);
     m_keyChain.sign(data);
     m_face.put(data);
-    std::cerr << "READ-SEGMENT\t" << path << '\t' << segment << '\t' << segLen << std::endl;
+    std::cout << act << "-OK" << '\t' << info.path << '\t' << sl.segment << std::endl;
   }
 
-  void replyNack(const Interest& interest)
+  void replyNack(const Name& name)
   {
-    Data data(interest.getName());
+    Data data(name);
     data.setContentType(tlv::ContentType_Nack);
     data.setFreshnessPeriod(1_ms);
     m_keyChain.sign(data);
@@ -135,6 +241,8 @@ main(int argc, char** argv)
     return 2;
   }
 
+  name::setConventionEncoding(name::Convention::TYPED);
+  name::setConventionDecoding(name::Convention::TYPED);
   ndn::Face face;
   ndn::KeyChain keyChain;
   FileServer app(face, keyChain, argv[1], argv[2]);

@@ -4,12 +4,28 @@
 
 ## Usage
 
-On a server, place files in a directory, and execute:
+### Start a Server
 
-    ./file-server /prefix /directory
+```bash
+ndn6-file-server /prefix /directory
+```
 
-On a client, retrieve `/directory/file.txt` with:
+### List Directory
 
-    ndncatchunks -d realtime /prefix/file.txt > file.txt
+To list directory `/directory/subdir`:
 
-[ndncatchunks.htm](./ndncatchunks.htm) is a web-based version of `ndncatchunks -d realtime`.
+```bash
+ndncatchunks -q /prefix/subdir/32=ls | tr '\0' '\n'
+```
+
+Response payload contains file and directory names separated by `\0`.
+Having `/` at the end of a name indicates a directory.
+Filesystem objects other than files and directories are skipped.
+
+### Retrieve File
+
+To retrieve file `/directory/subdir/file.txt`:
+
+```bash
+ndncatchunks -q /prefix/subdir/file.txt > file.txt
+```
