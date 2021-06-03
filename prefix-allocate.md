@@ -6,7 +6,9 @@
 
 On the router, execute:
 
-    ./prefix-allocate /customer-prefix
+```bash
+./prefix-allocate /customer-prefix
+```
 
 Allocated prefixes will be under `/customer-prefix`, in the form of `ndn:/customer-prefix/<timestamp>_<faceId>`.  
 A registered route will have origin 22804, and will not expire until requesting face is closed.
@@ -21,16 +23,18 @@ The response Data contains the allocated prefix in Content field as a Name eleme
 
 Example code for [NDN-JS](https://github.com/named-data/ndn-js):
 
-    function allocatePrefix(face, onSuccess, onFailure) {
-      face.expressInterest(new ndn.Name('/localhop/prefix-allocate/' + Math.random()),
-        function(interest, data) {
-          var decoder = new ndn.TlvDecoder(new ndn.Blob(data.getContent(), true).buf());
-          var name = new ndn.Name();
-          ndn.Tlv0_1_1WireFormat.decodeName(name, decoder);
-          onSuccess(name);
-        },
-        function(interest) {
-          onFailure();
-        }
-      );
+```js
+function allocatePrefix(face, onSuccess, onFailure) {
+  face.expressInterest(new ndn.Name('/localhop/prefix-allocate/' + Math.random()),
+    function(interest, data) {
+      var decoder = new ndn.TlvDecoder(new ndn.Blob(data.getContent(), true).buf());
+      var name = new ndn.Name();
+      ndn.Tlv0_1_1WireFormat.decodeName(name, decoder);
+      onSuccess(name);
+    },
+    function(interest) {
+      onFailure();
     }
+  );
+}
+```

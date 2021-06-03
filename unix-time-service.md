@@ -2,7 +2,7 @@
 
 `unix-time-service` tool answers queries of current Unix timestamp.
 
-This is compatible with [esp8266ndn UnixTime client](https://github.com/yoursunny/esp8266ndn/blob/master/src/app/unix-time.hpp).
+This is compatible with [esp8266ndn UnixTime client](https://github.com/yoursunny/esp8266ndn/blob/main/src/app/unix-time.hpp).
 
 ## Protocol
 
@@ -21,4 +21,6 @@ UnixTime answer:
 
 ## Usage
 
-    ./unix-time-service
+```bash
+./unix-time-service
+```

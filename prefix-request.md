@@ -7,7 +7,9 @@ This is a simplified alternate to remote prefix registration, suitable when pref
 
 On the router, execute:
 
-    ./prefix-request 63fyEiFW
+```bash
+./prefix-request 63fyEiFW
+```
 
 "63fyEiFW" in the example above is the shared secret.  
 You can generate a random secret with `makepasswd` command.
@@ -21,7 +23,9 @@ The columns are: timestamp, RibMgmt status code (0 for success, 8401 for wrong a
 
 On a web server, construct a request Name:
 
-    ndn:/localhop/prefix-request/<prefix-uri>/<answer>/<random>
+```text
+ndn:/localhop/prefix-request/<prefix-uri>/<answer>/<random>
+```
 
 * `<prefix-uri>` is the URI representation of the prefix to be registered.  
   It's intentional to use URI instead of TLV, so that the server process doesn't need to understand NDN encoding.
@@ -30,16 +34,18 @@ On a web server, construct a request Name:
 
 Example code for PHP:
 
-    define('SECRET', '63fyEiFW');
+```php
+define('SECRET', '63fyEiFW');
 
-    function prefix_request_interest($prefix) {
-      $hashctx = hash_init('sha256');
-      hash_update($hashctx, SECRET);
-      hash_update($hashctx, $prefix);
-      $answer = hash_final($hashctx);
+function prefix_request_interest($prefix) {
+  $hashctx = hash_init('sha256');
+  hash_update($hashctx, SECRET);
+  hash_update($hashctx, $prefix);
+  $answer = hash_final($hashctx);
 
-      return sprintf('/localhop/prefix-request/%s/%s/%d', urlencode($prefix), strtoupper($answer), mt_rand());
-    }
+  return sprintf('/localhop/prefix-request/%s/%s/%d', urlencode($prefix), strtoupper($answer), mt_rand());
+}
+```
 
 From a remote host (eg. web browser), obtain the request Name from web server (eg. via HTTP), and express an Interest using this Name.  
 The response Data contains the registered prefix in Content field as a Name element in TLV format.

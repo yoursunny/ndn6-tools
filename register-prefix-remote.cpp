@@ -21,16 +21,6 @@ static std::vector<std::tuple<const char*, const nfd::ControlCommand*, nfd::Cont
 static size_t commandPos = 0;
 
 static void
-usage(std::ostream& os, const po::options_description& options)
-{
-  os << "Usage: register-prefix-remote -f udp4://192.0.2.1:6363 -p /prefix -i /identity\n"
-        "\n"
-        "Register and keep prefixes on a remote router.\n"
-        "\n"
-     << options;
-}
-
-static void
 updateNexthop()
 {
   sched.schedule(60_s, updateNexthop);
@@ -99,47 +89,44 @@ sendOneCommand()
 int
 main(int argc, char** argv)
 {
-  po::options_description options("Options");
-  options.add_options()("help,h", "print help message")(
-    "face,f", po::value<std::string>(&faceUri)->required(),
-    "remote FaceUri")("prefix,p", po::value<std::vector<Name>>()->composing(), "register prefixes")(
-    "origin,o", po::value<int>()->default_value(nfd::ROUTE_ORIGIN_CLIENT),
-    "origin")("cost,c", po::value<int>()->default_value(0),
-              "cost")("no-inherit", "unset ChildInherit flag")("capture", "set Capture flag")(
-    "undo-autoreg", po::value<std::vector<Name>>()->composing(),
-    "unregister autoreg prefixes")("identity,i", po::value<Name>(), "signing identity");
-  po::variables_map vm;
-  po::store(po::parse_command_line(argc, argv, options), vm);
-  try {
-    po::notify(vm);
-  } catch (const po::error&) {
-    usage(std::cerr, options);
-    return 2;
+  auto args = parseProgramOptions(
+    argc, argv,
+    "Usage: register-prefix-remote -f udp4://192.0.2.1:6363 -p /prefix -i /identity\n"
+    "\n"
+    "Register and keep prefixes on a remote router.\n"
+    "\n",
+    [&](auto addOption) {
+      addOption("face,f", po::value<std::string>(&faceUri)->required(), "remote FaceUri");
+      addOption("prefix,p", po::value<std::vector<Name>>()->composing(), "register prefixes");
+      addOption("origin,o", po::value<int>()->default_value(nfd::ROUTE_ORIGIN_CLIENT), "origin");
+      addOption("cost,c", po::value<int>()->default_value(0), "cost");
+      addOption("no-inherit", "unset ChildInherit flag");
+      addOption("capture", "set Capture flag");
+      addOption("undo-autoreg", po::value<std::vector<Name>>()->composing(),
+                "unregister autoreg prefixes");
+      addOption("identity,i", po::value<Name>(), "signing identity");
+    });
+
+  if (args.count("identity") > 0) {
+    si = signingByIdentity(args["identity"].as<Name>());
   }
-  if (vm.count("help") > 0) {
-    usage(std::cout, options);
-    return 0;
-  }
-  if (vm.count("identity") > 0) {
-    si = signingByIdentity(vm["identity"].as<Name>());
-  }
-  if (vm.count("undo-autoreg") > 0) {
-    for (const Name& prefix : vm["undo-autoreg"].as<std::vector<Name>>()) {
+  if (args.count("undo-autoreg") > 0) {
+    for (const Name& prefix : args["undo-autoreg"].as<std::vector<Name>>()) {
       commands.emplace_back(
         "RibUnregister", &ribUnregister,
         nfd::ControlParameters().setName(prefix).setOrigin(nfd::ROUTE_ORIGIN_AUTOREG));
     }
   }
-  if (vm.count("prefix") > 0) {
-    for (const Name& prefix : vm["prefix"].as<std::vector<Name>>()) {
+  if (args.count("prefix") > 0) {
+    for (const Name& prefix : args["prefix"].as<std::vector<Name>>()) {
       commands.emplace_back(
         "RibRegister", &ribRegister,
         nfd::ControlParameters()
           .setName(prefix)
-          .setOrigin(static_cast<nfd::RouteOrigin>(vm["origin"].as<int>()))
-          .setCost(vm["cost"].as<int>())
-          .setFlagBit(nfd::ROUTE_FLAG_CHILD_INHERIT, vm.count("no-inherit") == 0, false)
-          .setFlagBit(nfd::ROUTE_FLAG_CAPTURE, vm.count("capture") > 0, false));
+          .setOrigin(static_cast<nfd::RouteOrigin>(args["origin"].as<int>()))
+          .setCost(args["cost"].as<int>())
+          .setFlagBit(nfd::ROUTE_FLAG_CHILD_INHERIT, args.count("no-inherit") == 0, false)
+          .setFlagBit(nfd::ROUTE_FLAG_CAPTURE, args.count("capture") > 0, false));
     }
   }
 

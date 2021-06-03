@@ -5,16 +5,6 @@
 namespace ndn6 {
 namespace register_prefix_cmd {
 
-static void
-usage(std::ostream& os, const po::options_description& options)
-{
-  os << "Usage: register-prefix-cmd [-u] -r /laptop-prefix -f 256 -i /identity\n"
-        "\n"
-        "Prepare a prefix (un)registration command.\n"
-        "\n"
-     << options;
-}
-
 int
 main(int argc, char** argv)
 {
@@ -25,28 +15,26 @@ main(int argc, char** argv)
   SigningInfo si;
   int advanceClock = 0;
 
-  po::options_description options("Options");
-  options.add_options()("help,h", "print help message")("unregister,u", "unregister")(
-    "prefix,p", po::value<Name>(&prefix)->required(),
-    "prefix")("command,P", po::value<Name>(&commandPrefix),
-              "command prefix")("face,f", po::value<int>(&faceId), "FaceId, default is self")(
-    "origin,o", po::value<int>(&origin), "origin")("no-inherit,I", "unset ChildInherit flag")(
-    "capture,C", "set Capture flag")("identity,i", po::value<Name>(), "signing identity")(
-    "advance-clock", po::value<int>(&advanceClock), "advance clock (millis)");
-  po::variables_map vm;
-  po::store(po::parse_command_line(argc, argv, options), vm);
-  try {
-    po::notify(vm);
-  } catch (const po::error&) {
-    usage(std::cerr, options);
-    return 2;
-  }
-  if (vm.count("help") > 0) {
-    usage(std::cout, options);
-    return 0;
-  }
-  if (vm.count("identity") > 0) {
-    si = signingByIdentity(vm["identity"].as<Name>());
+  auto args = parseProgramOptions(
+    argc, argv,
+    "Usage: register-prefix-cmd [-u] -r /laptop-prefix -f 256 -i /identity\n"
+    "\n"
+    "Prepare a prefix (un)registration command.\n"
+    "\n",
+    [&](auto addOption) {
+      addOption("unregister,u", "unregister");
+      addOption("prefix,p", po::value<Name>(&prefix)->required(), "prefix");
+      addOption("command,P", po::value<Name>(&commandPrefix), "command prefix");
+      addOption("face,f", po::value<int>(&faceId), "FaceId, default is self");
+      addOption("origin,o", po::value<int>(&origin), "origin");
+      addOption("no-inherit,I", "unset ChildInherit flag");
+      addOption("capture,C", "set Capture flag");
+      addOption("identity,i", po::value<Name>(), "signing identity");
+      addOption("advance-clock", po::value<int>(&advanceClock), "advance clock (millis)");
+    });
+
+  if (args.count("identity") > 0) {
+    si = signingByIdentity(args["identity"].as<Name>());
   }
   if (advanceClock > 0) {
     auto now = time::system_clock::now();
@@ -62,12 +50,12 @@ main(int argc, char** argv)
   }
   params.setOrigin(static_cast<nfd::RouteOrigin>(origin));
   std::unique_ptr<nfd::ControlCommand> command;
-  if (vm.count("unregister") > 0) {
+  if (args.count("unregister") > 0) {
     command = std::make_unique<nfd::RibUnregisterCommand>();
   } else {
     command = std::make_unique<nfd::RibRegisterCommand>();
-    params.setFlags((vm.count("no-inherit") > 0 ? 0 : nfd::ROUTE_FLAG_CHILD_INHERIT) |
-                    (vm.count("capture") > 0 ? nfd::ROUTE_FLAG_CAPTURE : 0));
+    params.setFlags((args.count("no-inherit") > 0 ? 0 : nfd::ROUTE_FLAG_CHILD_INHERIT) |
+                    (args.count("capture") > 0 ? nfd::ROUTE_FLAG_CAPTURE : 0));
   }
 
   KeyChain keyChain;

@@ -21,37 +21,61 @@
 
 namespace ndn6 {
 
+namespace po = boost::program_options;
+
+inline po::variables_map
+parseProgramOptions(int argc, char** argv, const char* usage,
+                    const std::function<void(po::options_description_easy_init)>& declare)
+{
+  po::options_description options("Options");
+  auto addOption = options.add_options();
+  addOption("help,h", "print help message");
+  declare(addOption);
+
+  po::variables_map vm;
+  po::store(po::parse_command_line(argc, argv, options), vm);
+  try {
+    po::notify(vm);
+  } catch (const po::error&) {
+    std::cerr << usage << options;
+    std::exit(2);
+  }
+
+  if (vm.count("help") > 0) {
+    std::cout << usage << options;
+    std::exit(0);
+  }
+
+  return vm;
+}
+
 using namespace ndn::literals::time_literals;
 
 namespace io = ndn::io;
 namespace lp = ndn::lp;
 namespace name = ndn::name;
 namespace nfd = ndn::nfd;
-namespace tlv = ndn::tlv;
 namespace time = ndn::time;
-
-namespace po = boost::program_options;
+namespace tlv = ndn::tlv;
 
 using ndn::Block;
 using ndn::Data;
-using ndn::Interest;
-using ndn::Name;
-using ndn::lp::Nack;
-
 using ndn::Face;
+using ndn::Interest;
 using ndn::InterestFilter;
-using ndn::Scheduler;
-
 using ndn::KeyChain;
+using ndn::Name;
+using ndn::Scheduler;
+using ndn::lp::Nack;
 using ndn::security::Certificate;
 using ndn::security::InterestSigner;
 using ndn::security::SigningInfo;
 
 inline void
-enableLocalFields(ndn::nfd::Controller& controller, const std::function<void()>& then = nullptr)
+enableLocalFields(nfd::Controller& controller, const std::function<void()>& then = nullptr)
 {
-  controller.start<ndn::nfd::FaceUpdateCommand>(
-    ndn::nfd::ControlParameters().setFlagBit(ndn::nfd::FaceFlagBit::BIT_LOCAL_FIELDS_ENABLED, true),
+  controller.start<nfd::FaceUpdateCommand>(
+    nfd::ControlParameters().setFlagBit(nfd::FaceFlagBit::BIT_LOCAL_FIELDS_ENABLED, true),
     [&](const auto& cp) {
       std::cerr << "EnableLocalFields OK" << std::endl;
       if (then != nullptr) {

@@ -7,7 +7,9 @@ It's meant to be piped into a script that takes action according to those events
 
 On the router, execute:
 
-    ./facemon
+```bash
+./facemon
+```
 
 Logs are written to stdout in TSV format.
 The columns are: timestamp, event ("CREATED" or "DESTROYED"), FaceId, RemoteUri, LocalUri.
