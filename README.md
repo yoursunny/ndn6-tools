@@ -30,6 +30,8 @@ sudo make uninstall
 
 [prefix-allocate](prefix-allocate.md): allocate a prefix to requesting face
 
+[prefix-proxy](prefix-proxy.md): handle prefix registration command with prefix confinement
+
 [prefix-request](prefix-request.md): register a prefix to requesting face, where the prefix is determined by a server process that knows a shared secret
 
 [register-prefix-cmd](register-prefix-cmd.md): prepare a prefix registration command

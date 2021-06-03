@@ -9,6 +9,7 @@ PROGRAMS = \
 	facemon \
 	file-server \
 	prefix-allocate \
+	prefix-proxy \
 	prefix-request \
 	register-prefix-cmd \
 	register-prefix-remote \
