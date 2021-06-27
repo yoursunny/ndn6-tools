@@ -86,7 +86,13 @@ private:
     FileInfo info;
 
     auto rel = name.getSubName(m_prefix.size(), name.size() - m_prefix.size() - suffixLen);
-    info.path = m_directory / fs::path(rel.toUri());
+    info.path = m_directory;
+    for (const name::Component& comp : rel) {
+      info.path /= std::string(reinterpret_cast<const char*>(comp.value()), comp.value_size());
+      if (info.path.filename_is_dot() || info.path.filename_is_dot_dot()) {
+        return info;
+      }
+    }
 
     boost::system::error_code ec;
     fs::file_status stat = fs::status(info.path, ec);

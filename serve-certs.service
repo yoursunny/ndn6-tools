@@ -8,7 +8,7 @@ Environment=HOME=/var/lib/ndn/nfd
 User=ndn
 Group=ndn
 WorkingDirectory=/var/lib/ndn/serve-certs
-ExecStart=sh -c '/usr/local/bin/ndn6-serve-certs *.ndncert'
+ExecStart=sh -c 'ndn6-serve-certs *.ndncert'
 Restart=on-failure
 ProtectSystem=full
 PrivateTmp=yes
