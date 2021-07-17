@@ -6,7 +6,8 @@ It performs additional validation that confines the registered prefix within the
 ## Usage
 
 ```bash
-ndn6-prefix-proxy --anchor root.ndncert.base64
+ndn6-prefix-proxy --anchor root.ndncert.base64 --open-prefix /ndn/multicast
 ```
 
-* `--anchor` specifies a trust anchor file (repeatable)
+* `--anchor` specifies a trust anchor file (required, repeatable)
+* `--open-prefix` specifies a prefix that anyone with a valid certificate can register without being confined by identity name (optional, repeatable)

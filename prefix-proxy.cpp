@@ -36,6 +36,7 @@ protected:
 
 static Face face;
 static KeyChain keyChain;
+static std::vector<Name> openPrefixes;
 static nfd::Controller controller(face, keyChain);
 static security::Validator validator(
   std::make_unique<security::ValidationPolicyCommandInterest>(
@@ -55,7 +56,6 @@ authorize(const Name& prefix, const Interest& interest, const mgmt::ControlParam
     reject(mgmt::RejectReply::SILENT);
     return;
   }
-  auto name = params.getName();
 
   Name signer;
   try {
@@ -68,14 +68,20 @@ authorize(const Name& prefix, const Interest& interest, const mgmt::ControlParam
     reject(mgmt::RejectReply::SILENT);
     return;
   }
-  if (!signer.isPrefixOf(name)) {
+
+  auto name = params.getName();
+  if (!(signer.isPrefixOf(name) ||
+        std::any_of(openPrefixes.begin(), openPrefixes.end(),
+                    [=](const Name& openPrefix) { return openPrefix.isPrefixOf(name); }))) {
+    std::cout << "!\t\t" << name << "\tprefix-disallowed\t" << signer << std::endl;
     reject(mgmt::RejectReply::STATUS403);
     return;
   }
 
   validator.validate(
     interest, [=](const Interest&) { accept(""); },
-    [=](const Interest&, const security::ValidationError&) {
+    [=](const Interest&, const security::ValidationError& e) {
+      std::cout << "!\t\t" << name << "\tvalidator-" << e.getCode() << "\t" << signer << std::endl;
       reject(mgmt::RejectReply::STATUS403);
     });
 }
@@ -108,33 +114,37 @@ defineCommand(const nfd::ControlCommand* command, const ndn::PartialName& verb,
 
 template<typename Command>
 static void
-proxyCommand(uint64_t client, nfd::ControlParameters params, mgmt::CommandContinuation done)
+proxyCommand(char verb, uint64_t client, nfd::ControlParameters params,
+             mgmt::CommandContinuation done)
 {
   params.setFaceId(client);
   controller.start<Command>(
     params,
     [=](const nfd::ControlParameters& body) {
+      std::cout << verb << '\t' << client << '\t' << params.getName() << '\t' << 200 << std::endl;
       nfd::ControlResponse res(200, "");
       res.setBody(body.wireEncode());
       done(res);
     },
-    [=](const nfd::ControlResponse& res) { done(res); });
+    [=](const nfd::ControlResponse& res) {
+      std::cout << verb << '\t' << client << '\t' << params.getName() << '\t' << res.getCode()
+                << std::endl;
+      done(res);
+    });
 }
 
 static void
 handleRegister(uint64_t client, const nfd::ControlParameters& params,
                const mgmt::CommandContinuation& done)
 {
-  std::cout << "R\t" << client << '\t' << params.getName() << std::endl;
-  proxyCommand<nfd::RibRegisterCommand>(client, params, done);
+  proxyCommand<nfd::RibRegisterCommand>('R', client, params, done);
 }
 
 static void
 handleUnregister(uint64_t client, const nfd::ControlParameters& params,
                  const mgmt::CommandContinuation& done)
 {
-  std::cout << "U\t" << client << '\t' << params.getName() << std::endl;
-  proxyCommand<nfd::RibUnregisterCommand>(client, params, done);
+  proxyCommand<nfd::RibUnregisterCommand>('U', client, params, done);
 }
 
 int
@@ -148,15 +158,20 @@ main(int argc, char** argv)
     "Proxy prefix registration commands.\n"
     "\n",
     [&](auto addOption) {
-      addOption("listen", po::value<Name>(&listenPrefix), "listen prefix");
-      addOption("anchor", po::value<std::vector<std::string>>()->composing(), "trust anchor files");
+      addOption("listen", po::value(&listenPrefix), "listen prefix");
+      addOption("anchor", po::value<std::vector<std::string>>()->required()->composing(),
+                "hierarchical trust anchor files");
+      addOption("open-prefix", po::value(&openPrefixes)->composing(),
+                "prefixes anyone can register");
     });
 
-  if (args.count("anchor") > 0) {
-    for (const std::string& filename : args["anchor"].as<std::vector<std::string>>()) {
-      auto cert = io::load<Certificate>(filename);
-      validator.loadAnchor(filename, std::move(*cert));
+  for (const std::string& filename : args["anchor"].as<std::vector<std::string>>()) {
+    auto cert = io::load<Certificate>(filename);
+    if (cert == nullptr) {
+      std::cerr << "anchor file not found: " << filename << std::endl;
+      return 1;
     }
+    validator.loadAnchor(filename, std::move(*cert));
   }
 
   enableLocalFields(controller, [&] {

@@ -1,6 +1,6 @@
 # ndn6-tools
 
-This repository contains tools for yoursunny's (now discontinued) NDN6 router.
+This repository contains tools running in [yoursunny ndn6 network](https://yoursunny.com/p/ndn6/).
 
 ## Build Instructions
 
