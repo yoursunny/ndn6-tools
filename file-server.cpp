@@ -4,6 +4,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <boost/optional.hpp>
 
 namespace ndn6 {
 namespace file_server {
@@ -19,7 +20,7 @@ static const ndn::PartialName lsSuffix("32=ls");
 class SegmentLimit
 {
 public:
-  static SegmentLimit parse(const Name& name, size_t size)
+  static SegmentLimit parse(const Name& name, uint64_t size)
   {
     SegmentLimit sl;
     if (size == 0) {
@@ -29,11 +30,16 @@ public:
 
     sl.segment = name[-1].toSegment();
     sl.seekTo = sl.segment * SEGMENT_SIZE;
-    sl.lastSeg = size / SEGMENT_SIZE + static_cast<int>(size % SEGMENT_SIZE != 0) - 1;
+    sl.lastSeg = computeLastSeg(size);
     sl.segLen =
       sl.segment == sl.lastSeg && size % SEGMENT_SIZE != 0 ? size % SEGMENT_SIZE : SEGMENT_SIZE;
     sl.ok = sl.segment <= sl.lastSeg;
     return sl;
+  }
+
+  static uint64_t computeLastSeg(uint64_t size)
+  {
+    return size / SEGMENT_SIZE + static_cast<int>(size % SEGMENT_SIZE != 0) - 1;
   }
 
 public:
@@ -57,6 +63,7 @@ public:
   bool isDir = false;
   fs::path path;
   Name versioned;
+  boost::optional<uint64_t> size;
 };
 
 class FileServer : boost::noncopyable
@@ -90,24 +97,31 @@ private:
     for (const name::Component& comp : rel) {
       info.path /= std::string(reinterpret_cast<const char*>(comp.value()), comp.value_size());
       if (info.path.filename_is_dot() || info.path.filename_is_dot_dot()) {
-        return info;
+        return FileInfo{};
       }
     }
 
     boost::system::error_code ec;
     fs::file_status stat = fs::status(info.path, ec);
     if (ec) {
-      return info;
+      return FileInfo{};
     }
-    std::time_t writeTime = fs::last_write_time(info.path, ec);
-    if (ec) {
-      return info;
-    }
-
     info.isFile = fs::is_regular_file(stat);
     info.isDir = fs::is_directory(stat);
+
+    std::time_t writeTime = fs::last_write_time(info.path, ec);
+    if (ec) {
+      return FileInfo{};
+    }
     info.versioned =
       name.getPrefix(-suffixLen).append(suffixInsert).appendVersion(writeTime * 1000000);
+
+    if (info.isFile) {
+      info.size = static_cast<uint64_t>(fs::file_size(info.path, ec));
+      if (ec) {
+        return FileInfo{};
+      }
+    }
     return info;
   }
 
@@ -125,7 +139,7 @@ private:
     replyRdr("RDR-DIR", name, info, info.isDir);
   }
 
-  void replyRdr(const char* act, const Name& name, const FileInfo& info, bool found)
+  void replyRdr(const char* act, Name name, const FileInfo& info, bool found)
   {
     if (!found) {
       replyNack(name);
@@ -133,9 +147,20 @@ private:
       return;
     }
 
-    MetadataObject mo;
-    mo.setVersionedName(info.versioned);
-    Data data = mo.makeData(name, m_keyChain);
+    Block content(tlv::Content);
+    content.push_back(info.versioned.wireEncode());
+    if (info.size) {
+      content.push_back(name::Component::fromByteOffset(*info.size).wireEncode());
+      uint64_t lastSeg = SegmentLimit::computeLastSeg(*info.size);
+      content.push_back(name::Component::fromSegment(lastSeg).wireEncode());
+    }
+    content.encode();
+
+    Data data(name.appendVersion().appendSegment(0));
+    data.setFreshnessPeriod(1_ms);
+    data.setFinalBlock(data.getName().get(-1));
+    data.setContent(content);
+    m_keyChain.sign(data);
     m_face.put(data);
     std::cout << act << "-OK" << '\t' << info.path << '\t' << info.versioned << std::endl;
   }
@@ -149,14 +174,7 @@ private:
       return;
     }
 
-    boost::system::error_code ec;
-    uint64_t size = static_cast<uint64_t>(fs::file_size(info.path, ec));
-    if (ec) {
-      replyNack(name);
-      return;
-    }
-
-    auto sl = SegmentLimit::parse(name, size);
+    auto sl = SegmentLimit::parse(name, *info.size);
     if (!sl.ok) {
       replyNack(name);
       return;
