@@ -6,6 +6,11 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/optional.hpp>
 
+#include <linux/stat.h>
+#include <sys/stat.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+
 namespace ndn6 {
 namespace file_server {
 
@@ -13,9 +18,22 @@ namespace fs = boost::filesystem;
 
 using MetadataObject = ndn::MetadataObject;
 
-static const uint64_t SEGMENT_SIZE = 5120;
-static const ndn::PartialName lsSuffix("32=ls");
+static const uint64_t STATX_MASK_REQUIRED = STATX_TYPE | STATX_MTIME | STATX_SIZE;
+static const uint64_t STATX_MASK_OPTIONAL = STATX_MODE | STATX_ATIME | STATX_CTIME | STATX_BTIME;
+static const uint64_t SEGMENT_SIZE = 6144;
+static const name::Component lsComponent = name::Component::fromEscapedString("32=ls");
 #define ANY "[^<32=ls><32=metadata>]"
+
+enum
+{
+  TtSegmentSize = 0xF500,
+  TtSize = 0xF502,
+  TtMode = 0xF504,
+  TtAtime = 0xF506,
+  TtBtime = 0xF508,
+  TtCtime = 0xF50A,
+  TtMtime = 0xF50C,
+};
 
 class SegmentLimit
 {
@@ -53,17 +71,103 @@ public:
 class FileInfo
 {
 public:
-  bool checkSegmentInterestName(const Name& name)
+  bool prepare(const fs::path& mountpoint, const ndn::PartialName& rel)
+  {
+    path = mountpoint;
+    for (const name::Component& comp : rel) {
+      path /= std::string(reinterpret_cast<const char*>(comp.value()), comp.value_size());
+      if (path.filename_is_dot() || path.filename_is_dot_dot()) {
+        return false;
+      }
+    }
+
+    int res =
+      syscall(__NR_statx, -1, path.c_str(), 0, STATX_MASK_REQUIRED | STATX_MASK_OPTIONAL, &st);
+    return res == 0 && (st.stx_mask & STATX_MASK_REQUIRED) == STATX_MASK_REQUIRED;
+  }
+
+  size_t size() const
+  {
+    return st.stx_size;
+  }
+
+  bool isFile() const
+  {
+    return S_ISREG(st.stx_mode);
+  }
+
+  bool isDir() const
+  {
+    return S_ISDIR(st.stx_mode);
+  }
+
+  boost::optional<uint64_t> atime() const
+  {
+    return timestamp(STATX_ATIME, st.stx_atime);
+  }
+
+  boost::optional<uint64_t> btime() const
+  {
+    return timestamp(STATX_BTIME, st.stx_btime);
+  }
+
+  boost::optional<uint64_t> ctime() const
+  {
+    return timestamp(STATX_CTIME, st.stx_ctime);
+  }
+
+  uint64_t mtime() const
+  {
+    return *timestamp(STATX_MTIME, st.stx_mtime);
+  }
+
+  bool checkSegmentInterestName(const Name& name) const
   {
     return versioned.isPrefixOf(name) && name[-1].isSegment();
   }
 
+  Block buildMetadata() const
+  {
+    Block content(tlv::Content);
+    content.push_back(versioned.wireEncode());
+    if (isFile()) {
+      uint64_t lastSeg = SegmentLimit::computeLastSeg(size());
+      content.push_back(name::Component::fromSegment(lastSeg).wireEncode());
+      content.push_back(ndn::encoding::makeNonNegativeIntegerBlock(TtSegmentSize, SEGMENT_SIZE));
+      content.push_back(ndn::encoding::makeNonNegativeIntegerBlock(TtSize, size()));
+    }
+    content.push_back(ndn::encoding::makeNonNegativeIntegerBlock(TtMode, st.stx_mode));
+    auto t = atime();
+    if (t) {
+      content.push_back(ndn::encoding::makeNonNegativeIntegerBlock(TtAtime, *t));
+    }
+    t = btime();
+    if (t) {
+      content.push_back(ndn::encoding::makeNonNegativeIntegerBlock(TtBtime, *t));
+    }
+    t = ctime();
+    if (t) {
+      content.push_back(ndn::encoding::makeNonNegativeIntegerBlock(TtCtime, *t));
+    }
+    content.push_back(ndn::encoding::makeNonNegativeIntegerBlock(TtMtime, mtime()));
+    content.encode();
+    return content;
+  }
+
+private:
+  boost::optional<uint64_t> timestamp(uint64_t maskBit, struct statx_timestamp t) const
+  {
+    boost::optional<uint64_t> v;
+    if ((st.stx_mask & maskBit) == maskBit) {
+      v = static_cast<uint64_t>(t.tv_sec) * 1000000000 + t.tv_nsec;
+    }
+    return v;
+  }
+
 public:
-  bool isFile = false;
-  bool isDir = false;
   fs::path path;
+  struct statx st;
   Name versioned;
-  boost::optional<uint64_t> size;
 };
 
 class FileServer : boost::noncopyable
@@ -87,41 +191,18 @@ public:
   }
 
 private:
-  FileInfo parseInterestName(const Name& name, int suffixLen,
-                             const ndn::PartialName& suffixInsert = ndn::PartialName())
+  FileInfo parseInterestName(const Name& name, int suffixLen)
   {
-    FileInfo info;
-
     auto rel = name.getSubName(m_prefix.size(), name.size() - m_prefix.size() - suffixLen);
-    info.path = m_directory;
-    for (const name::Component& comp : rel) {
-      info.path /= std::string(reinterpret_cast<const char*>(comp.value()), comp.value_size());
-      if (info.path.filename_is_dot() || info.path.filename_is_dot_dot()) {
-        return FileInfo{};
-      }
-    }
-
-    boost::system::error_code ec;
-    fs::file_status stat = fs::status(info.path, ec);
-    if (ec) {
+    FileInfo info;
+    if (!info.prepare(m_directory, rel)) {
       return FileInfo{};
     }
-    info.isFile = fs::is_regular_file(stat);
-    info.isDir = fs::is_directory(stat);
-
-    std::time_t writeTime = fs::last_write_time(info.path, ec);
-    if (ec) {
-      return FileInfo{};
+    info.versioned = name.getPrefix(-suffixLen);
+    if (info.isDir()) {
+      info.versioned.append(lsComponent);
     }
-    info.versioned =
-      name.getPrefix(-suffixLen).append(suffixInsert).appendVersion(writeTime * 1000000);
-
-    if (info.isFile) {
-      info.size = static_cast<uint64_t>(fs::file_size(info.path, ec));
-      if (ec) {
-        return FileInfo{};
-      }
-    }
+    info.versioned.appendVersion(info.mtime());
     return info;
   }
 
@@ -129,14 +210,14 @@ private:
   {
     auto name = interest.getName();
     auto info = parseInterestName(name, 1);
-    replyRdr("RDR-FILE", name, info, info.isFile);
+    replyRdr("RDR-FILE", name, info, info.isFile() || info.isDir());
   }
 
   void rdrDir(const Interest& interest)
   {
     auto name = interest.getName();
-    auto info = parseInterestName(name, 2, lsSuffix);
-    replyRdr("RDR-DIR", name, info, info.isDir);
+    auto info = parseInterestName(name, 2);
+    replyRdr("RDR-DIR", name, info, info.isDir());
   }
 
   void replyRdr(const char* act, Name name, const FileInfo& info, bool found)
@@ -147,19 +228,10 @@ private:
       return;
     }
 
-    Block content(tlv::Content);
-    content.push_back(info.versioned.wireEncode());
-    if (info.size) {
-      content.push_back(name::Component::fromByteOffset(*info.size).wireEncode());
-      uint64_t lastSeg = SegmentLimit::computeLastSeg(*info.size);
-      content.push_back(name::Component::fromSegment(lastSeg).wireEncode());
-    }
-    content.encode();
-
     Data data(name.appendVersion().appendSegment(0));
     data.setFreshnessPeriod(1_ms);
     data.setFinalBlock(data.getName().get(-1));
-    data.setContent(content);
+    data.setContent(info.buildMetadata());
     m_keyChain.sign(data);
     m_face.put(data);
     std::cout << act << "-OK" << '\t' << info.path << '\t' << info.versioned << std::endl;
@@ -169,14 +241,12 @@ private:
   {
     auto name = interest.getName();
     auto info = parseInterestName(name, 2);
-    if (!info.isFile || !info.checkSegmentInterestName(name)) {
-      replyNack(name);
+    if (!info.isFile() || !info.checkSegmentInterestName(name)) {
       return;
     }
 
-    auto sl = SegmentLimit::parse(name, *info.size);
+    auto sl = SegmentLimit::parse(name, info.size());
     if (!sl.ok) {
-      replyNack(name);
       return;
     }
 
@@ -187,9 +257,8 @@ private:
   void readDir(const Interest& interest)
   {
     auto name = interest.getName();
-    auto info = parseInterestName(name, 3, lsSuffix);
-    if (!info.isDir || !info.checkSegmentInterestName(name)) {
-      replyNack(name);
+    auto info = parseInterestName(name, 3);
+    if (!info.isDir() || !info.checkSegmentInterestName(name)) {
       return;
     }
 
@@ -215,7 +284,6 @@ private:
 
     auto sl = SegmentLimit::parse(name, stream.tellp());
     if (!sl.ok) {
-      replyNack(name);
       return;
     }
 
