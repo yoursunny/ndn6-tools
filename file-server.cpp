@@ -18,8 +18,8 @@ namespace fs = boost::filesystem;
 
 using MetadataObject = ndn::MetadataObject;
 
-static const uint64_t STATX_MASK_REQUIRED = STATX_TYPE | STATX_MTIME | STATX_SIZE;
-static const uint64_t STATX_MASK_OPTIONAL = STATX_MODE | STATX_ATIME | STATX_CTIME | STATX_BTIME;
+static const uint32_t STATX_MASK_REQUIRED = STATX_TYPE | STATX_MODE | STATX_MTIME | STATX_SIZE;
+static const uint32_t STATX_MASK_OPTIONAL = STATX_ATIME | STATX_CTIME | STATX_BTIME;
 static const uint64_t SEGMENT_SIZE = 6144;
 static const name::Component lsComponent = name::Component::fromEscapedString("32=ls");
 #define ANY "[^<32=ls><32=metadata>]"
@@ -57,7 +57,8 @@ public:
 
   static uint64_t computeLastSeg(uint64_t size)
   {
-    return size / SEGMENT_SIZE + static_cast<int>(size % SEGMENT_SIZE != 0) - 1;
+    return size / SEGMENT_SIZE + static_cast<uint64_t>(size % SEGMENT_SIZE != 0) -
+           static_cast<uint64_t>(size > 0);
   }
 
 public:
@@ -83,7 +84,7 @@ public:
 
     int res =
       syscall(__NR_statx, -1, path.c_str(), 0, STATX_MASK_REQUIRED | STATX_MASK_OPTIONAL, &st);
-    return res == 0 && (st.stx_mask & STATX_MASK_REQUIRED) == STATX_MASK_REQUIRED;
+    return res == 0 && has(STATX_MASK_REQUIRED);
   }
 
   size_t size() const
@@ -101,24 +102,9 @@ public:
     return S_ISDIR(st.stx_mode);
   }
 
-  boost::optional<uint64_t> atime() const
-  {
-    return timestamp(STATX_ATIME, st.stx_atime);
-  }
-
-  boost::optional<uint64_t> btime() const
-  {
-    return timestamp(STATX_BTIME, st.stx_btime);
-  }
-
-  boost::optional<uint64_t> ctime() const
-  {
-    return timestamp(STATX_CTIME, st.stx_ctime);
-  }
-
   uint64_t mtime() const
   {
-    return *timestamp(STATX_MTIME, st.stx_mtime);
+    return timestamp(st.stx_mtime);
   }
 
   bool checkSegmentInterestName(const Name& name) const
@@ -131,23 +117,26 @@ public:
     Block content(tlv::Content);
     content.push_back(versioned.wireEncode());
     if (isFile()) {
+      Block finalBlockId(tlv::FinalBlockId);
       uint64_t lastSeg = SegmentLimit::computeLastSeg(size());
-      content.push_back(name::Component::fromSegment(lastSeg).wireEncode());
+      finalBlockId.push_back(name::Component::fromSegment(lastSeg).wireEncode());
+      finalBlockId.encode();
+      content.push_back(finalBlockId);
       content.push_back(ndn::encoding::makeNonNegativeIntegerBlock(TtSegmentSize, SEGMENT_SIZE));
       content.push_back(ndn::encoding::makeNonNegativeIntegerBlock(TtSize, size()));
     }
     content.push_back(ndn::encoding::makeNonNegativeIntegerBlock(TtMode, st.stx_mode));
-    auto t = atime();
-    if (t) {
-      content.push_back(ndn::encoding::makeNonNegativeIntegerBlock(TtAtime, *t));
+    if (has(STATX_ATIME)) {
+      content.push_back(
+        ndn::encoding::makeNonNegativeIntegerBlock(TtAtime, timestamp(st.stx_atime)));
     }
-    t = btime();
-    if (t) {
-      content.push_back(ndn::encoding::makeNonNegativeIntegerBlock(TtBtime, *t));
+    if (has(STATX_BTIME)) {
+      content.push_back(
+        ndn::encoding::makeNonNegativeIntegerBlock(TtBtime, timestamp(st.stx_btime)));
     }
-    t = ctime();
-    if (t) {
-      content.push_back(ndn::encoding::makeNonNegativeIntegerBlock(TtCtime, *t));
+    if (has(STATX_CTIME)) {
+      content.push_back(
+        ndn::encoding::makeNonNegativeIntegerBlock(TtCtime, timestamp(st.stx_ctime)));
     }
     content.push_back(ndn::encoding::makeNonNegativeIntegerBlock(TtMtime, mtime()));
     content.encode();
@@ -155,13 +144,14 @@ public:
   }
 
 private:
-  boost::optional<uint64_t> timestamp(uint64_t maskBit, struct statx_timestamp t) const
+  bool has(uint32_t bit) const
   {
-    boost::optional<uint64_t> v;
-    if ((st.stx_mask & maskBit) == maskBit) {
-      v = static_cast<uint64_t>(t.tv_sec) * 1000000000 + t.tv_nsec;
-    }
-    return v;
+    return (st.stx_mask & bit) == bit;
+  }
+
+  uint64_t timestamp(struct statx_timestamp t) const
+  {
+    return static_cast<uint64_t>(t.tv_sec) * 1000000000 + t.tv_nsec;
   }
 
 public:

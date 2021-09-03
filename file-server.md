@@ -39,19 +39,19 @@ ndncatchunks -q /prefix/subdir/file.txt > file.txt
 
 The consumer first sends a [RDR discovery Interest](https://redmine.named-data.net/projects/ndn-tlv/wiki/RDR):
 
-* `/directory/subdir/32=ls/32=metadata`: directory listing
-* `/directory/subdir/file.txt/32=metadata`: file retrieval
-* `/directory/subdir/32=metadata`: refer to a directory without "32=ls" keyword
+* `/prefix/subdir/32=ls/32=metadata`: directory listing
+* `/prefix/subdir/file.txt/32=metadata`: file retrieval
+* `/prefix/subdir/32=metadata`: refer to a directory without "32=ls" keyword
 
 The Interest must have CanBePrefix and MustBeFresh, as per RDR specification.
 
 ### RDR Metadata
 
 The file server responds with a metadata packet.
-Its Content payload contains a sequence of TLV elements:
+Its Content payload contains the following TLV elements:
 
 * Name: versioned name prefix; version number is derived from last modification time.
-* SegmentNameComponent: last segment number (inclusive), same as FinalBlockId.
+* FinalBlockId: enclosed SegmentNameComponent that reflects last segment number (inclusive).
 * SegmentSize (TLV-TYPE 0xF500, NonNegativeInteger): segment size (octets); last segment may be shorter.
 * Size (TLV-TYPE 0xF502, NonNegativeInteger): file size (octets).
 * Mode (TLV-TYPE 0xF504, NonNegativeInteger): file type and mode, see [inode manpage](https://man7.org/linux/man-pages/man7/inode.7.html).
@@ -63,6 +63,9 @@ Its Content payload contains a sequence of TLV elements:
 Name, Mode, Mtime are always present.
 SegmentNameComponent, SegmentSize, Size are omitted on a directory.
 Atime, Btime, Ctime may be omitted if the underlying filesystem cannot provide them.
+
+The TLV elements may appear in any order.
+The consumer should ignore any TLV element with an unrecognized TLV-TYPE.
 
 ### Segmented Object Retrieval
 
