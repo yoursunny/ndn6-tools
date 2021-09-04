@@ -1,25 +1,26 @@
 #include "common.hpp"
 
-#include <ndn-cxx/metadata-object.hpp>
-
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/optional.hpp>
 
-#include <linux/stat.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+
+#ifndef STATX_TYPE
+// Debian 10: sys/stat.h declares STATX_TYPE etc, linux/stat.h would cause conflict
+// Ubuntu 18: sys/stat.h does not declare STATX_TYPE etc, linux/stat.h is needed and does not conflict
+#include <linux/stat.h>
+#endif
 
 namespace ndn6 {
 namespace file_server {
 
 namespace fs = boost::filesystem;
 
-using MetadataObject = ndn::MetadataObject;
-
-static const uint32_t STATX_MASK_REQUIRED = STATX_TYPE | STATX_MODE | STATX_MTIME | STATX_SIZE;
-static const uint32_t STATX_MASK_OPTIONAL = STATX_ATIME | STATX_CTIME | STATX_BTIME;
+static const uint32_t STATX_REQUIRED = STATX_TYPE | STATX_MODE | STATX_MTIME | STATX_SIZE;
+static const uint32_t STATX_OPTIONAL = STATX_ATIME | STATX_CTIME | STATX_BTIME;
 static const uint64_t SEGMENT_SIZE = 6144;
 static const name::Component lsComponent = name::Component::fromEscapedString("32=ls");
 #define ANY "[^<32=ls><32=metadata>]"
@@ -82,9 +83,8 @@ public:
       }
     }
 
-    int res =
-      syscall(__NR_statx, -1, path.c_str(), 0, STATX_MASK_REQUIRED | STATX_MASK_OPTIONAL, &st);
-    return res == 0 && has(STATX_MASK_REQUIRED);
+    int res = syscall(__NR_statx, -1, path.c_str(), 0, STATX_REQUIRED | STATX_OPTIONAL, &st);
+    return res == 0 && has(STATX_REQUIRED);
   }
 
   size_t size() const
