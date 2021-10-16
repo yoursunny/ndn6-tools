@@ -1,5 +1,7 @@
 #include "common.hpp"
 
+#include <queue>
+
 namespace ndn6 {
 namespace register_prefix_remote {
 
@@ -13,24 +15,79 @@ static SigningInfo si;
 static std::string faceUri;
 static std::shared_ptr<ndn::lp::NextHopFaceIdTag> nexthopTag;
 
+static bool toLocal = false;
+static Name nlsrRouter;
+static std::vector<Name> nlsrNamesFilter;
+static std::set<Name> nlsrNames;
+
+class LsdbNamesDataset : public nfd::StatusDataset
+{
+public:
+  LsdbNamesDataset()
+    : StatusDataset("nlsr/lsdb/names")
+  {}
+
+  using ResultType = std::set<Name>;
+
+  ResultType parseResult(ndn::ConstBufferPtr payload)
+  {
+    std::set<Name> names;
+    size_t offset = 0;
+    while (offset < payload->size()) {
+      bool isOk = false;
+      Block lsa;
+      std::tie(isOk, lsa) = Block::fromBuffer(payload, offset);
+      if (!isOk) {
+        break;
+      }
+      offset += lsa.size();
+
+      lsa.parse();
+      for (const auto& element : lsa.elements()) {
+        if (element.type() == tlv::Name) {
+          names.emplace(element);
+        }
+      }
+    }
+    return names;
+  }
+};
+
 static Name commandPrefix("/localhop/nfd");
 static nfd::RibRegisterCommand ribRegister;
 static nfd::RibUnregisterCommand ribUnregister;
-static std::vector<std::tuple<const char*, const nfd::ControlCommand*, nfd::ControlParameters>>
-  commands;
-static size_t commandPos = 0;
+
+enum class CommandKind
+{
+  SENTINEL,
+  UPDATE_NEXTHOP,
+  REGISTER,
+  UNDO_AUTOREG,
+  UPDATE_NLSR_DATASET,
+  NLSR_SYNC,
+};
+
+struct Command
+{
+  CommandKind kind;
+  Name prefix;
+};
+
+static std::queue<Command> commands;
+
+static void
+scheduleNext(bool recur = true);
 
 static void
 updateNexthop()
 {
-  sched.schedule(60_s, updateNexthop);
-
   controller.fetch<nfd::FaceQueryDataset>(
     nfd::FaceQueryFilter().setRemoteUri(faceUri),
     [](const std::vector<nfd::FaceStatus>& faces) {
       if (faces.empty()) {
         std::cerr << "FaceQuery face not found" << std::endl;
         nexthopTag = nullptr;
+        scheduleNext();
         return;
       }
 
@@ -39,34 +96,89 @@ updateNexthop()
         std::cerr << "FaceQuery found " << faceId << std::endl;
         nexthopTag = std::make_shared<lp::NextHopFaceIdTag>(faceId);
       }
+      scheduleNext();
     },
     [](uint32_t code, const std::string& reason) {
       std::cerr << "FaceQuery error " << code << " " << reason << std::endl;
+      scheduleNext();
     });
 }
 
 static void
-sendOneCommand()
+updateNlsrDataset()
+{
+  controller.fetch<LsdbNamesDataset>(
+    [](const std::set<Name>& dataset) {
+      std::set<Name> acceptNames;
+      for (const auto& name : dataset) {
+        if (std::none_of(nlsrNamesFilter.begin(), nlsrNamesFilter.end(),
+                         [=](const Name& prefix) { return prefix.isPrefixOf(name); })) {
+          continue;
+        }
+        acceptNames.insert(name);
+        if (nlsrNames.count(name) == 0) {
+          std::cerr << "LSDB-names new " << name << std::endl;
+          commands.push({ CommandKind::NLSR_SYNC, name });
+        }
+      }
+      nlsrNames.swap(acceptNames);
+      scheduleNext();
+    },
+    [](uint32_t code, const std::string& reason) {
+      std::cerr << "LSDB-names error " << code << " " << reason << std::endl;
+      scheduleNext();
+    },
+    nfd::CommandOptions().setPrefix(nlsrRouter));
+}
+
+static void
+regUnregPrefix(const Command& cmd)
 {
   if (nexthopTag == nullptr) {
-    sched.schedule(5_s, sendOneCommand);
-    return;
-  }
-  if (commandPos >= commands.size()) {
-    commandPos = 0;
-    sched.schedule(180_s, sendOneCommand);
+    scheduleNext();
     return;
   }
 
+  bool recur = true;
   const char* verb = nullptr;
-  const nfd::ControlCommand* command = nullptr;
+  const nfd::ControlCommand* cc = nullptr;
   nfd::ControlParameters param;
-  std::tie(verb, command, param) = commands.at(commandPos);
-  ++commandPos;
-  sched.schedule(5_s, sendOneCommand);
+  param.setName(cmd.prefix);
+  param.setOrigin(nfd::ROUTE_ORIGIN_CLIENT);
+  if (toLocal) {
+    param.setFaceId(nexthopTag->get());
+  }
+  switch (cmd.kind) {
+    case CommandKind::REGISTER:
+      verb = "register";
+      cc = &ribRegister;
+      param.setFlagBit(nfd::ROUTE_FLAG_CAPTURE, true, false);
+      break;
+    case CommandKind::UNDO_AUTOREG:
+      verb = "undo-autoreg";
+      cc = &ribUnregister;
+      param.setOrigin(nfd::ROUTE_ORIGIN_AUTOREG);
+      break;
+    case CommandKind::NLSR_SYNC:
+      if (nlsrNames.size() > 0) {
+        verb = "nlsr-advertise";
+        cc = &ribRegister;
+        param.setFlagBit(nfd::ROUTE_FLAG_CAPTURE, true, false);
+      } else {
+        verb = "nlsr-withdraw";
+        cc = &ribRegister;
+        recur = false;
+      }
+      break;
+    default:
+      assert(false);
+      break;
+  }
 
-  auto interest = cis.makeCommandInterest(command->getRequestName(commandPrefix, param), si);
-  interest.setTag(nexthopTag);
+  auto interest = cis.makeCommandInterest(cc->getRequestName(commandPrefix, param), si);
+  if (!toLocal) {
+    interest.setTag(nexthopTag);
+  }
   face.expressInterest(
     interest,
     [=](const Interest&, const Data& data) {
@@ -77,13 +189,51 @@ sendOneCommand()
       } catch (const tlv::Error&) {
         std::cerr << verb << " " << param.getName() << " bad-response" << std::endl;
       }
+      scheduleNext(recur);
     },
     [=](const Interest&, const lp::Nack& nack) {
       std::cerr << verb << " " << param.getName() << " Nack~" << nack.getReason() << std::endl;
+      scheduleNext(recur);
     },
     [=](const Interest&) {
       std::cerr << verb << " " << param.getName() << " timeout" << std::endl;
+      scheduleNext(recur);
     });
+}
+
+static void
+runFrontCommand()
+{
+  const auto& cmd = commands.front();
+  switch (cmd.kind) {
+    case CommandKind::SENTINEL:
+      scheduleNext();
+      break;
+    case CommandKind::UPDATE_NEXTHOP:
+      updateNexthop();
+      break;
+    case CommandKind::UPDATE_NLSR_DATASET:
+      updateNlsrDataset();
+      break;
+    case CommandKind::REGISTER:
+    case CommandKind::UNDO_AUTOREG:
+    case CommandKind::NLSR_SYNC:
+      regUnregPrefix(cmd);
+      break;
+  }
+}
+
+static void
+scheduleNext(bool recur)
+{
+  auto cmd = commands.front();
+  commands.pop();
+  auto delay = cmd.kind == CommandKind::SENTINEL ? 60_s : 2_s;
+  if (recur) {
+    commands.push(std::move(cmd));
+  }
+
+  sched.schedule(delay, runFrontCommand);
 }
 
 int
@@ -98,42 +248,40 @@ main(int argc, char** argv)
     [&](auto addOption) {
       addOption("face,f", po::value<std::string>(&faceUri)->required(), "remote FaceUri");
       addOption("prefix,p", po::value<std::vector<Name>>()->composing(), "register prefixes");
-      addOption("origin,o", po::value<int>()->default_value(nfd::ROUTE_ORIGIN_CLIENT), "origin");
-      addOption("cost,c", po::value<int>()->default_value(0), "cost");
-      addOption("no-inherit", "unset ChildInherit flag");
-      addOption("capture", "set Capture flag");
       addOption("undo-autoreg", po::value<std::vector<Name>>()->composing(),
                 "unregister autoreg prefixes");
+      addOption("nlsr-router", po::value<Name>(&nlsrRouter)->default_value("/localhost"),
+                "NLSR router name");
+      addOption("nlsr-readvertise", po::value<std::vector<Name>>(&nlsrNamesFilter)->composing(),
+                "readvertise NLSR prefixes");
+      addOption("nlsr-to-local", po::bool_switch(&toLocal), "readvertise to local NLSR instead");
       addOption("identity,i", po::value<Name>(), "signing identity");
     });
 
-  if (args.count("identity") > 0) {
-    si = signingByIdentity(args["identity"].as<Name>());
-  }
+  commands.push({ CommandKind::UPDATE_NEXTHOP, "" });
   if (args.count("undo-autoreg") > 0) {
     for (const Name& prefix : args["undo-autoreg"].as<std::vector<Name>>()) {
-      commands.emplace_back(
-        "RibUnregister", &ribUnregister,
-        nfd::ControlParameters().setName(prefix).setOrigin(nfd::ROUTE_ORIGIN_AUTOREG));
+      commands.push({ CommandKind::UNDO_AUTOREG, prefix });
     }
   }
   if (args.count("prefix") > 0) {
     for (const Name& prefix : args["prefix"].as<std::vector<Name>>()) {
-      commands.emplace_back(
-        "RibRegister", &ribRegister,
-        nfd::ControlParameters()
-          .setName(prefix)
-          .setOrigin(static_cast<nfd::RouteOrigin>(args["origin"].as<int>()))
-          .setCost(args["cost"].as<int>())
-          .setFlagBit(nfd::ROUTE_FLAG_CHILD_INHERIT, args.count("no-inherit") == 0, false)
-          .setFlagBit(nfd::ROUTE_FLAG_CAPTURE, args.count("capture") > 0, false));
+      commands.push({ CommandKind::REGISTER, prefix });
     }
   }
+  if (!nlsrNamesFilter.empty()) {
+    commands.push({ CommandKind::UPDATE_NLSR_DATASET, "" });
+  }
+  commands.push({ CommandKind::SENTINEL, "" });
 
-  enableLocalFields(controller, [] {
-    updateNexthop();
-    sendOneCommand();
-  });
+  if (toLocal) {
+    commandPrefix = "/localhost/nfd";
+  }
+  if (args.count("identity") > 0) {
+    si = signingByIdentity(args["identity"].as<Name>());
+  }
+
+  enableLocalFields(controller, runFrontCommand);
   face.processEvents();
   return 0;
 }
