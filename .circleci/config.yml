@@ -30,7 +30,7 @@ jobs:
       - checkout
       - run: |
           make lint
-          [[ $(git status --porcelain | tee /dev/stderr | wc -l) -eq 0 ]]
+          git diff --exit-code
       - run: make
       - run: sudo make install
 

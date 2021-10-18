@@ -160,7 +160,7 @@ regUnregPrefix(const Command& cmd)
       param.setOrigin(nfd::ROUTE_ORIGIN_AUTOREG);
       break;
     case CommandKind::NLSR_SYNC:
-      if (nlsrNames.size() > 0) {
+      if (nlsrNames.count(cmd.prefix) > 0) {
         verb = "nlsr-advertise";
         cc = &ribRegister;
         param.setFlagBit(nfd::ROUTE_FLAG_CAPTURE, true, false);
