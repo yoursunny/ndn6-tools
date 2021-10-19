@@ -166,7 +166,7 @@ regUnregPrefix(const Command& cmd)
         param.setFlagBit(nfd::ROUTE_FLAG_CAPTURE, true, false);
       } else {
         verb = "nlsr-withdraw";
-        cc = &ribRegister;
+        cc = &ribUnregister;
         recur = false;
       }
       break;
