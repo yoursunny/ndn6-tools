@@ -1,13 +1,13 @@
-# prefix-allocate
+# ndn6-prefix-allocate
 
-`prefix-allocate` tool allocates a prefix to the requesting face upon receiving a request.
+`ndn6-prefix-allocate` tool allocates a prefix to the requesting face upon receiving a request.
 
 ## Deployment
 
 On the router, execute:
 
 ```bash
-./prefix-allocate /customer-prefix
+ndn6-prefix-allocate /customer-prefix
 ```
 
 Allocated prefixes will be under `/customer-prefix`, in the form of `ndn:/customer-prefix/<timestamp>_<faceId>`.  

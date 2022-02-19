@@ -1,6 +1,6 @@
-# unix-time-service
+# ndn6-unix-time-service
 
-`unix-time-service` tool answers queries of current Unix timestamp.
+`ndn6-unix-time-service` tool answers queries of current Unix timestamp.
 
 This is compatible with [esp8266ndn UnixTime client](https://github.com/yoursunny/esp8266ndn/blob/main/src/app/unix-time.hpp).
 
@@ -22,5 +22,5 @@ UnixTime answer:
 ## Usage
 
 ```bash
-./unix-time-service
+ndn6-unix-time-service
 ```

@@ -1,6 +1,6 @@
-# file-server
+# ndn6-file-server
 
-`file-server` tool serves files from a directory.
+`ndn6-file-server` tool serves files from a directory.
 This is compatible with [NDNts](https://yoursunny.com/p/NDNts/) `@ndn/cat` package `ndncat file-client` command.
 
 ## Usage
@@ -61,7 +61,7 @@ Its Content payload contains the following TLV elements:
 * Mtime (TLV-TYPE 0xF50C, NonNegativeInteger): last modification time (nanoseconds since Unix epoch).
 
 Name, Mode, Mtime are always present.
-SegmentNameComponent, SegmentSize, Size are omitted on a directory.
+FinalBlockId, SegmentSize, Size are omitted on a directory.
 Atime, Btime, Ctime may be omitted if the underlying filesystem cannot provide them.
 
 The TLV elements may appear in any order.
@@ -70,14 +70,14 @@ The consumer should ignore any TLV element with an unrecognized TLV-TYPE.
 ### Segmented Object Retrieval
 
 Then, the consumer downloads the directory listing or file content as a segmented object under the discovered version.
-Version and segment components are encoded as [Naming Conventions rev2](https://named-data.net/publications/techreports/ndn-tr-22-2-ndn-memo-naming-conventions/).
+Version and segment components are encoded as [Naming Conventions rev3](https://named-data.net/publications/techreports/ndn-tr-22-3-ndn-memo-naming-conventions/).
 *FinalBlockId* in every segment packet points to the last segment number.
 
 ### Error Handling
 
 If the request is invalid, such as nonexisting path, incorrect version number (differs from last modification timestamp), "ls" on a file:
 
-* For a RDR discovery Interest, the server responds with an application layer Nack (Data packet with ContentType=Nack).
+* For an RDR discovery Interest, the server responds with an application layer Nack (Data packet with ContentType=Nack).
 * For a segment Interest, the server does not respond.
 
 The consumer should be prepared to handle this condition.

@@ -1,6 +1,6 @@
-# facemon
+# ndn6-facemon
 
-`facemon` tool prints a log line whenever a face is created or destroyed.
+`ndn6-facemon` tool prints a log line whenever a face is created or destroyed.
 It's meant to be piped into a script that takes action according to those events.
 
 ## Deployment
@@ -8,7 +8,7 @@ It's meant to be piped into a script that takes action according to those events
 On the router, execute:
 
 ```bash
-./facemon
+ndn6-facemon
 ```
 
 Logs are written to stdout in TSV format.

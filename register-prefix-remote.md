@@ -1,6 +1,6 @@
-# register-prefix-remote
+# ndn6-register-prefix-remote
 
-`register-prefix-remote` tool periodically sends prefix registration commands to a specified remote face.
+`ndn6-register-prefix-remote` tool periodically sends prefix registration commands to a specified remote face.
 The signed Interests are sent with *NextHopFaceIdTag*, and does not follow the local FIB entry of `/localhop/nfd` prefix.
 This enables two use cases:
 
@@ -15,7 +15,7 @@ Additionally, this tool can:
 ## Usage
 
 ```bash
-./register-prefix-remote -f udp6://[2001:db8:3de3:e486:ce0a:f157:c78c:b2e5]:6363 \
+ndn6-register-prefix-remote -f udp6://[2001:db8:3de3:e486:ce0a:f157:c78c:b2e5]:6363 \
   -p /example/A -p /example/B \
   -i /com/example/user
 ```

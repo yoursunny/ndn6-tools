@@ -1,6 +1,6 @@
-# serve-certs
+# ndn6-serve-certs
 
-`serve-certs` tool is a producer for V2 certificates.
+`ndn6-serve-certs` tool is a producer for V2 certificates.
 For each certificate, it registers a prefix derived from the certificate name minus IssuerId and Version components, which allows Interests of either key name or certificate name to reach this tool.
 
 ## Usage

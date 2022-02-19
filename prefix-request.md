@@ -1,6 +1,6 @@
-# prefix-request
+# ndn6-prefix-request
 
-`prefix-request` tool registers a prefix to requesting face, where the prefix is determined by a server process that knows a shared secret.  
+`ndn6-prefix-request` tool registers a prefix to requesting face, where the prefix is determined by a server process that knows a shared secret.
 This is a simplified alternate to remote prefix registration, suitable when prefix assignment is centrally controlled.
 
 ## Deployment
@@ -8,7 +8,7 @@ This is a simplified alternate to remote prefix registration, suitable when pref
 On the router, execute:
 
 ```bash
-./prefix-request 63fyEiFW
+ndn6-prefix-request 63fyEiFW
 ```
 
 "63fyEiFW" in the example above is the shared secret.  

@@ -6,23 +6,23 @@ This repository contains tools running in [yoursunny ndn6 network](https://yours
 
 ## Available Tools
 
-[facemon](facemon.md): log when a face is created or destroyed
+[ndn6-facemon](facemon.md): log when a face is created or destroyed
 
-[file-server](file-server.md): serve file from filesystem
+[ndn6-file-server](file-server.md): serve file from filesystem
 
-[prefix-allocate](prefix-allocate.md): allocate a prefix to requesting face
+[ndn6-prefix-allocate](prefix-allocate.md): allocate a prefix to requesting face
 
-[prefix-proxy](prefix-proxy.md): handle prefix registration command with prefix confinement
+[ndn6-prefix-proxy](prefix-proxy.md): handle prefix registration command with prefix confinement
 
-[prefix-request](prefix-request.md): register a prefix to requesting face, where the prefix is determined by a server process that knows a shared secret
+[ndn6-prefix-request](prefix-request.md): register a prefix to requesting face, where the prefix is determined by a server process that knows a shared secret
 
-[register-prefix-cmd](register-prefix-cmd.md): prepare a prefix registration command
+[ndn6-register-prefix-cmd](register-prefix-cmd.md): prepare a prefix registration command
 
-[register-prefix-remote](register-prefix-remote.md): send prefix registration commands to a specified remote face
+[ndn6-register-prefix-remote](register-prefix-remote.md): send prefix registration commands to a specified remote face
 
-[serve-certs](serve-certs.md): serve certificates
+[ndn6-serve-certs](serve-certs.md): serve certificates
 
-[unix-time-service](unix-time-service.md): answers queries of current Unix timestamp
+[ndn6-unix-time-service](unix-time-service.md): answers queries of current Unix timestamp
 
 ## Install from Binary Package
 
