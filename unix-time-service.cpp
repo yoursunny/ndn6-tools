@@ -8,7 +8,6 @@ using ndn::MetaInfo;
 int
 main()
 {
-  name::setConventionEncoding(name::Convention::TYPED);
   Face face;
   KeyChain keyChain;
   Name prefix = "/localhop/unix-time";

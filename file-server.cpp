@@ -323,7 +323,6 @@ main(int argc, char** argv)
     return 2;
   }
 
-  name::setConventionEncoding(name::Convention::TYPED);
   name::setConventionDecoding(name::Convention::TYPED);
   ndn::Face face;
   ndn::KeyChain keyChain;
