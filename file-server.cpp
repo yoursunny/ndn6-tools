@@ -284,8 +284,8 @@ private:
                     std::istream& stream)
   {
     stream.seekg(sl.seekTo);
-    char buf[SEGMENT_SIZE];
-    stream.read(buf, sl.segLen);
+    uint8_t buf[SEGMENT_SIZE];
+    stream.read(reinterpret_cast<char*>(buf), sl.segLen);
     if (!stream) {
       std::cout << act << "-ERROR" << '\t' << info.path << '\t' << sl.segment << std::endl;
       return;
@@ -293,7 +293,7 @@ private:
 
     Data data(name);
     data.setFinalBlock(name::Component::fromSegment(sl.lastSeg));
-    data.setContent(reinterpret_cast<const uint8_t*>(buf), sl.segLen);
+    data.setContent(ndn::make_span(buf, sl.segLen));
     m_keyChain.sign(data);
     m_face.put(data);
     std::cout << act << "-OK" << '\t' << info.path << '\t' << sl.segment << std::endl;

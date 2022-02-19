@@ -9,6 +9,7 @@
 #include <ndn-cxx/security/key-chain.hpp>
 #include <ndn-cxx/security/signing-helpers.hpp>
 #include <ndn-cxx/util/io.hpp>
+#include <ndn-cxx/util/span.hpp>
 #include <ndn-cxx/util/time.hpp>
 
 #include <boost/program_options/options_description.hpp>

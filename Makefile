@@ -1,5 +1,5 @@
 CXX ?= g++
-CXXFLAGS ?= -std=c++14 -Wall -Werror -O2 -g `pkg-config --cflags libndn-cxx`
+CXXFLAGS ?= -std=c++17 -Wall -Werror -Wno-error=deprecated-declarations -O2 -g `pkg-config --cflags libndn-cxx`
 LDFLAGS ?=
 LIBS ?= `pkg-config --libs libndn-cxx`
 PREFIX ?= /usr/local
@@ -16,22 +16,27 @@ PROGRAMS = \
 	serve-certs \
 	unix-time-service
 
+.PHONY: all
 all: $(PROGRAMS)
 
 %: %.cpp *.hpp
 	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
 
+.PHONY: lint
 lint:
 	clang-format-11 -i -style=file *.hpp *.cpp
 
+.PHONY: clean
 clean:
 	rm -f $(PROGRAMS)
 
+.PHONY: install
 install: all
 	install -d -m0755 $(DESTDIR)$(PREFIX)/bin $(DESTDIR)$(PREFIX)/lib/systemd/system
 	sh -c 'for P in $(PROGRAMS); do install $$P $(DESTDIR)$(PREFIX)/bin/ndn6-$$P; done'
 	install -m0644 -T serve-certs.service $(DESTDIR)$(PREFIX)/lib/systemd/system/ndn6-serve-certs.service
 
+.PHONY: uninstall
 uninstall:
 	sh -c 'for P in $(PROGRAMS); do rm -f $(DESTDIR)$(PREFIX)/bin/ndn6-$$P; done'
 	rm -f $(DESTDIR)$(PREFIX)/lib/systemd/system/ndn6-serve-certs.service

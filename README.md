@@ -37,7 +37,7 @@ To install binary package:
 
 Requirements:
 
-* Ubuntu 18.04, Ubuntu 20.04, Debian 10, or Debian 11
+* Ubuntu 20.04, Debian 11
 * [ndn-cxx](https://named-data.net/doc/ndn-cxx/) installed from PPA or [NFD-nightly](https://nfd-nightly.ndn.today/)
 
 To compile and install:
