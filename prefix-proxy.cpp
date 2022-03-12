@@ -5,7 +5,7 @@
 #include <ndn-cxx/security/validation-policy-simple-hierarchy.hpp>
 
 namespace ndn6 {
-namespace prefix_server {
+namespace prefix_proxy {
 
 namespace mgmt = ndn::mgmt;
 namespace security = ndn::security;
@@ -57,23 +57,27 @@ authorize(const Name& prefix, const Interest& interest, const mgmt::ControlParam
     return;
   }
 
-  Name signer;
+  std::optional<Name> signer;
   try {
-    ndn::SignatureInfo si(
-      interest.getName().at(ndn::signed_interest::POS_SIG_INFO).blockFromValue());
-    if (si.hasKeyLocator() && si.getKeyLocator().getType() == tlv::Name) {
-      signer = security::extractIdentityNameFromKeyLocator(si.getKeyLocator().getName());
+    auto si = interest.getSignatureInfo();
+    if (!si) {
+      si.emplace(interest.getName().at(ndn::signed_interest::POS_SIG_INFO).blockFromValue());
+    }
+    if (si->hasKeyLocator() && si->getKeyLocator().getType() == tlv::Name) {
+      signer = security::extractIdentityNameFromKeyLocator(si->getKeyLocator().getName());
     }
   } catch (const tlv::Error&) {
+  }
+  if (!signer) {
     reject(mgmt::RejectReply::SILENT);
     return;
   }
 
   auto name = params.getName();
-  if (!(signer.isPrefixOf(name) ||
+  if (!(signer->isPrefixOf(name) ||
         std::any_of(openPrefixes.begin(), openPrefixes.end(),
                     [=](const Name& openPrefix) { return openPrefix.isPrefixOf(name); }))) {
-    std::cout << "!\t\t" << name << "\tprefix-disallowed\t" << signer << std::endl;
+    std::cout << "!\t\t" << name << "\tprefix-disallowed\t" << *signer << std::endl;
     reject(mgmt::RejectReply::STATUS403);
     return;
   }
@@ -81,7 +85,7 @@ authorize(const Name& prefix, const Interest& interest, const mgmt::ControlParam
   validator.validate(
     interest, [=](const Interest&) { accept(""); },
     [=](const Interest&, const security::ValidationError& e) {
-      std::cout << "!\t\t" << name << "\tvalidator-" << e.getCode() << "\t" << signer << std::endl;
+      std::cout << "!\t\t" << name << "\tvalidator-" << e.getCode() << "\t" << *signer << std::endl;
       reject(mgmt::RejectReply::STATUS403);
     });
 }
@@ -189,11 +193,11 @@ main(int argc, char** argv)
   return 0;
 }
 
-} // namespace prefix_server
+} // namespace prefix_proxy
 } // namespace ndn6
 
 int
 main(int argc, char** argv)
 {
-  return ndn6::prefix_server::main(argc, argv);
+  return ndn6::prefix_proxy::main(argc, argv);
 }
