@@ -2,7 +2,6 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include <boost/optional.hpp>
 
 #include <sys/stat.h>
 #include <sys/syscall.h>

@@ -1,5 +1,6 @@
 CXX ?= g++
-CXXFLAGS ?= -std=c++17 -Wall -Werror -Wno-error=deprecated-declarations -O2 -g `pkg-config --cflags libndn-cxx`
+CXXFLAGS ?= -Wall -Werror -Wno-error=deprecated-declarations -O2 -g
+ALL_CXXFLAGS = $(CXXFLAGS) -std=c++17 `pkg-config --cflags libndn-cxx`
 LDFLAGS ?=
 LIBS ?= `pkg-config --libs libndn-cxx`
 PREFIX ?= /usr/local
@@ -19,7 +20,7 @@ PROGRAMS = \
 all: $(PROGRAMS)
 
 %: %.cpp *.hpp
-	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
+	$(CXX) $(ALL_CXXFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
 
 .PHONY: lint
 lint:

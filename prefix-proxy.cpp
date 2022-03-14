@@ -57,7 +57,7 @@ authorize(const Name& prefix, const Interest& interest, const mgmt::ControlParam
     return;
   }
 
-  std::optional<Name> signer;
+  ndn::optional<Name> signer;
   try {
     auto si = interest.getSignatureInfo();
     if (!si) {
