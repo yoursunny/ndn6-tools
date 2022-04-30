@@ -1,5 +1,15 @@
 version: 2.1
 
+commands:
+  install_deps:
+    steps:
+      - run: |
+          sudo apt-get install --no-install-recommends $(awk '
+            /Build-Depends/ { p=1; next }
+            p && $1~":" { p=0 }
+            p { gsub(",", "", $1); print $1 }
+          ' debian/control)
+
 jobs:
   build-ppa:
     docker:
@@ -9,9 +19,9 @@ jobs:
           password: $DOCKERHUB_TOKEN
     resource_class: small
     steps:
-      - run: sudo add-apt-repository ppa:named-data/ppa
-      - run: sudo apt-get install --no-install-recommends libndn-cxx-dev
       - checkout
+      - run: sudo add-apt-repository ppa:named-data/ppa
+      - install_deps
       - run: make
       - run: sudo make install
   build-nightly:
@@ -22,17 +32,18 @@ jobs:
           password: $DOCKERHUB_TOKEN
     resource_class: small
     steps:
+      - checkout
       - run: |
           echo "deb [trusted=yes] https://nfd-nightly-apt.ndn.today/ubuntu focal main" \
             | sudo tee /etc/apt/sources.list.d/nfd-nightly.list
           sudo apt-get update
-      - run: sudo apt-get install --no-install-recommends clang-format-11 libndn-cxx-dev
-      - checkout
-      - run: |
-          make lint
-          git diff --exit-code
+      - install_deps
       - run: make
       - run: sudo make install
+      - run: |
+          sudo apt-get install --no-install-recommends clang-format-11
+          make lint
+          git diff --exit-code
 
 workflows:
   build:
