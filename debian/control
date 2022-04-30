@@ -3,7 +3,8 @@ Section: utils
 Priority: optional
 Maintainer: Junxiao Shi <deb@mail1.yoursunny.com>
 Build-Depends: debhelper (>= 10),
-               libndn-cxx-dev
+               libndn-cxx-dev,
+               pkg-config (>= 0.29)
 Standards-Version: 4.5.1
 Homepage: https://github.com/yoursunny/ndn6-tools
 
