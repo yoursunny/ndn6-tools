@@ -241,7 +241,7 @@ main(int argc, char** argv)
 {
   auto args = parseProgramOptions(
     argc, argv,
-    "Usage: register-prefix-remote -f udp4://192.0.2.1:6363 -p /prefix -i /identity\n"
+    "Usage: ndn6-register-prefix-remote -f udp4://192.0.2.1:6363 -p /prefix -i /identity\n"
     "\n"
     "Register and keep prefixes on a remote router.\n"
     "\n",

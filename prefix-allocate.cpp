@@ -74,7 +74,7 @@ int
 main(int argc, char** argv)
 {
   if (argc != 2) {
-    std::cerr << "prefix-allocate /prefix" << std::endl;
+    std::cerr << "ndn6-prefix-allocate /prefix" << std::endl;
     return -1;
   }
 

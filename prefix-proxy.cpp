@@ -157,7 +157,7 @@ main(int argc, char** argv)
   Name listenPrefix("/localhop/nfd");
   auto args = parseProgramOptions(
     argc, argv,
-    "Usage: prefix-proxy\n"
+    "Usage: ndn6-prefix-proxy\n"
     "\n"
     "Proxy prefix registration commands.\n"
     "\n",

@@ -318,7 +318,7 @@ int
 main(int argc, char** argv)
 {
   if (argc != 3) {
-    std::cerr << "file-server prefix directory" << std::endl;
+    std::cerr << "ndn6-file-server prefix directory" << std::endl;
     return 2;
   }
 

@@ -26,15 +26,21 @@ namespace po = boost::program_options;
 
 inline po::variables_map
 parseProgramOptions(int argc, char** argv, const char* usage,
-                    const std::function<void(po::options_description_easy_init)>& declare)
+                    const std::function<void(po::options_description_easy_init)>& declare,
+                    const char* positionalOption = nullptr, int positionalMax = -1)
 {
   po::options_description options("Options");
   auto addOption = options.add_options();
   addOption("help,h", "print help message");
   declare(addOption);
 
+  po::positional_options_description positional;
+  if (positionalOption != nullptr) {
+    positional.add(positionalOption, positionalMax);
+  }
+
   po::variables_map vm;
-  po::store(po::parse_command_line(argc, argv, options), vm);
+  po::store(po::command_line_parser(argc, argv).options(options).positional(positional).run(), vm);
   try {
     po::notify(vm);
   } catch (const po::error&) {
