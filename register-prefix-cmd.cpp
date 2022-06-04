@@ -2,8 +2,7 @@
 
 #include <ndn-cxx/util/time-unit-test-clock.hpp>
 
-namespace ndn6 {
-namespace register_prefix_cmd {
+namespace ndn6::register_prefix_cmd {
 
 int
 main(int argc, char** argv)
@@ -67,8 +66,7 @@ main(int argc, char** argv)
   return 0;
 }
 
-} // namespace register_prefix_cmd
-} // namespace ndn6
+} // namespace ndn6::register_prefix_cmd
 
 int
 main(int argc, char** argv)

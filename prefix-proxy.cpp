@@ -4,8 +4,7 @@
 #include <ndn-cxx/security/validation-policy-command-interest.hpp>
 #include <ndn-cxx/security/validation-policy-simple-hierarchy.hpp>
 
-namespace ndn6 {
-namespace prefix_proxy {
+namespace ndn6::prefix_proxy {
 
 namespace mgmt = ndn::mgmt;
 namespace security = ndn::security;
@@ -193,8 +192,7 @@ main(int argc, char** argv)
   return 0;
 }
 
-} // namespace prefix_proxy
-} // namespace ndn6
+} // namespace ndn6::prefix_proxy
 
 int
 main(int argc, char** argv)

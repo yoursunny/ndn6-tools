@@ -1,7 +1,6 @@
 #include "common.hpp"
 
-namespace ndn6 {
-namespace prefix_allocate {
+namespace ndn6::prefix_allocate {
 
 static const int ORIGIN_ALLOCATE = 22804;
 
@@ -84,8 +83,7 @@ main(int argc, char** argv)
   return 0;
 }
 
-} // namespace prefix_allocate
-} // namespace ndn6
+} // namespace ndn6::prefix_allocate
 
 int
 main(int argc, char** argv)

@@ -2,8 +2,7 @@
 
 #include <queue>
 
-namespace ndn6 {
-namespace register_prefix_remote {
+namespace ndn6::register_prefix_remote {
 
 static Face face;
 static Scheduler sched(face.getIoService());
@@ -286,8 +285,7 @@ main(int argc, char** argv)
   return 0;
 }
 
-} // namespace register_prefix_remote
-} // namespace ndn6
+} // namespace ndn6::register_prefix_remote
 
 int
 main(int argc, char** argv)

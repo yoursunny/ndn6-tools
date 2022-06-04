@@ -13,8 +13,7 @@
 #include <linux/stat.h>
 #endif
 
-namespace ndn6 {
-namespace file_server {
+namespace ndn6::file_server {
 
 namespace fs = boost::filesystem;
 
@@ -330,8 +329,7 @@ main(int argc, char** argv)
   return 0;
 }
 
-} // namespace file_server
-} // namespace ndn6
+} // namespace ndn6::file_server
 
 int
 main(int argc, char** argv)

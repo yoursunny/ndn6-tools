@@ -2,8 +2,7 @@
 
 #include <ndn-cxx/mgmt/nfd/face-monitor.hpp>
 
-namespace ndn6 {
-namespace facemon {
+namespace ndn6::facemon {
 
 void
 printInterest(const Name& prefix, const Interest& interest)
@@ -57,8 +56,7 @@ main()
   return 0;
 }
 
-} // namespace facemon
-} // namespace ndn6
+} // namespace ndn6::facemon
 
 int
 main(int argc, char** argv)

@@ -1,9 +1,6 @@
 #include "common.hpp"
 
-namespace ndn6 {
-namespace unix_time_service {
-
-using ndn::MetaInfo;
+namespace ndn6::unix_time_service {
 
 int
 main()
@@ -18,7 +15,7 @@ main()
         return;
       }
       Data data(Name(prefix).appendTimestamp());
-      data.setMetaInfo(MetaInfo().setFreshnessPeriod(1_ms));
+      data.setMetaInfo(ndn::MetaInfo().setFreshnessPeriod(1_ms));
       keyChain.sign(data);
       face.put(data);
     },
@@ -27,8 +24,7 @@ main()
   return 0;
 }
 
-} // namespace unix_time_service
-} // namespace ndn6
+} // namespace ndn6::unix_time_service
 
 int
 main(int argc, char** argv)

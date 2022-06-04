@@ -1,7 +1,6 @@
 #include "common.hpp"
 
-namespace ndn6 {
-namespace serve_certs {
+namespace ndn6::serve_certs {
 
 const auto FETCH_TIMEOUT = 7777_ms;
 const auto FETCH_RETRY = 7222_ms;
@@ -135,8 +134,7 @@ main(int argc, char** argv)
   return 0;
 }
 
-} // namespace serve_certs
-} // namespace ndn6
+} // namespace ndn6::serve_certs
 
 int
 main(int argc, char** argv)
