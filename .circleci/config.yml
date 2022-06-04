@@ -14,9 +14,6 @@ jobs:
   build-ppa:
     docker:
       - image: cimg/base:stable-18.04
-        auth:
-          username: $DOCKERHUB_USER
-          password: $DOCKERHUB_TOKEN
     resource_class: small
     steps:
       - checkout
@@ -27,9 +24,6 @@ jobs:
   build-nightly:
     docker:
       - image: cimg/base:stable-20.04
-        auth:
-          username: $DOCKERHUB_USER
-          password: $DOCKERHUB_TOKEN
     resource_class: small
     steps:
       - checkout
@@ -44,9 +38,38 @@ jobs:
           sudo apt-get install --no-install-recommends clang-format-11
           make lint
           git diff --exit-code
+  debuild:
+    docker:
+      - image: cimg/base:stable-20.04
+    resource_class: small
+    steps:
+      - run: |
+          echo "deb [trusted=yes] https://nfd-nightly-apt.ndn.today/ubuntu focal main" \
+            | sudo tee /etc/apt/sources.list.d/nfd-nightly.list
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends devscripts equivs lsb-release
+      - checkout
+      - run: |
+          PKGNAME=ndn6-tools
+          SRCVER=$(git show -s --format='%ct %H' | awk '{ printf "0.0.0-%s-%s", strftime("%Y%m%d%H%M%S", $1), substr($2,1,12) }')
+          PKGVER="${SRCVER}~ci"
+          DISTRO=$(lsb_release -sc)
+          (
+            echo "${PKGNAME} (${PKGVER}) ${DISTRO}; urgency=medium"
+            echo "  * CI build"
+            echo " -- CI <ci@example.com>  $(date -R)"
+          ) > debian/changelog
+      - run: |
+          mk-build-deps
+          sudo apt-get -y -o Debug::pkgProblemResolver=yes --no-install-recommends install ./ndn6-tools-build-deps_*.deb
+          rm ndn6-tools-build-deps_*.deb
+      - run: |
+          sed -i '/\bdh\b/ s|$| --no-parallel|' debian/rules
+          debuild -us -uc
 
 workflows:
   build:
     jobs:
       - build-ppa
       - build-nightly
+      - debuild
