@@ -9,6 +9,27 @@ namespace ndn6::prefix_proxy {
 namespace mgmt = ndn::mgmt;
 namespace security = ndn::security;
 
+class InterestOrSigInfo
+{
+public:
+  explicit InterestOrSigInfo(const Interest& interest)
+    : m_interest(interest)
+  {}
+
+  operator const Interest&() const
+  {
+    return m_interest;
+  }
+
+  operator const ndn::SignatureInfo&()
+  {
+    return *m_interest.getSignatureInfo();
+  }
+
+private:
+  const Interest& m_interest;
+};
+
 class ValidationPolicyPassInterest : public security::ValidationPolicy
 {
 public:
@@ -28,7 +49,12 @@ protected:
                    const std::shared_ptr<security::ValidationState>& state,
                    const ValidationContinuation& continueValidation) override
   {
-    Name klName = getKeyLocatorName(interest, *state);
+    Name klName;
+    try {
+      klName = getKeyLocatorName(InterestOrSigInfo(interest), *state);
+    } catch (const nonstd::bad_optional_access&) {
+      state->fail(security::ValidationError::INVALID_KEY_LOCATOR);
+    }
     continueValidation(std::make_shared<security::CertificateRequest>(klName), state);
   }
 };
