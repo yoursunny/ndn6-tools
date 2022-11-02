@@ -1,3 +1,4 @@
+*.out
 /.vscode
 /debian/*debhelper*
 /debian/changelog

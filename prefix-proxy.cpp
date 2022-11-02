@@ -14,7 +14,11 @@ class InterestOrSigInfo
 public:
   explicit InterestOrSigInfo(const Interest& interest)
     : m_interest(interest)
-  {}
+  {
+    if (auto sigInfo = interest.getSignatureInfo(); sigInfo) {
+      m_sigInfo = *sigInfo;
+    }
+  }
 
   operator const Interest&() const
   {
@@ -23,11 +27,12 @@ public:
 
   operator const ndn::SignatureInfo&()
   {
-    return *m_interest.getSignatureInfo();
+    return m_sigInfo;
   }
 
 private:
   const Interest& m_interest;
+  ndn::SignatureInfo m_sigInfo;
 };
 
 class ValidationPolicyPassInterest : public security::ValidationPolicy
