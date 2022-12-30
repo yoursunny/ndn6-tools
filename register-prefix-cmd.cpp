@@ -59,7 +59,8 @@ main(int argc, char** argv)
 
   KeyChain keyChain;
   InterestSigner cis(keyChain);
-  Interest interest = cis.makeCommandInterest(command->getRequestName(commandPrefix, params), si);
+  Interest interest(command->getRequestName(commandPrefix, params));
+  cis.makeSignedInterest(interest, si);
 
   Block wire = interest.wireEncode();
   std::cout.write(reinterpret_cast<const char*>(wire.wire()), wire.size());

@@ -14,6 +14,7 @@ static SigningInfo si;
 static std::string faceUri;
 static std::shared_ptr<ndn::lp::NextHopFaceIdTag> nexthopTag;
 
+static ndn::optional<time::milliseconds> regExpiration;
 static bool toLocal = false;
 static Name nlsrRouter;
 static std::vector<Name> nlsrNamesFilter;
@@ -151,7 +152,6 @@ regUnregPrefix(const Command& cmd)
     case CommandKind::REGISTER:
       verb = "register";
       cc = &ribRegister;
-      param.setFlagBit(nfd::ROUTE_FLAG_CAPTURE, true, false);
       break;
     case CommandKind::UNDO_AUTOREG:
       verb = "undo-autoreg";
@@ -162,7 +162,6 @@ regUnregPrefix(const Command& cmd)
       if (nlsrNames.count(cmd.prefix) > 0) {
         verb = "nlsr-advertise";
         cc = &ribRegister;
-        param.setFlagBit(nfd::ROUTE_FLAG_CAPTURE, true, false);
       } else {
         verb = "nlsr-withdraw";
         cc = &ribUnregister;
@@ -170,11 +169,18 @@ regUnregPrefix(const Command& cmd)
       }
       break;
     default:
-      assert(false);
+      BOOST_ASSERT(false);
       break;
   }
+  if (cc == &ribRegister) {
+    param.setFlagBit(nfd::ROUTE_FLAG_CAPTURE, true, false);
+    if (regExpiration) {
+      param.setExpirationPeriod(*regExpiration);
+    }
+  }
 
-  auto interest = cis.makeCommandInterest(cc->getRequestName(commandPrefix, param), si);
+  Interest interest(cc->getRequestName(commandPrefix, param));
+  cis.makeSignedInterest(interest, si);
   if (!toLocal) {
     interest.setTag(nexthopTag);
   }
@@ -185,8 +191,8 @@ regUnregPrefix(const Command& cmd)
         nfd::ControlResponse response;
         response.wireDecode(data.getContent().blockFromValue());
         std::cerr << verb << " " << param.getName() << " " << response.getCode() << std::endl;
-      } catch (const tlv::Error&) {
-        std::cerr << verb << " " << param.getName() << " bad-response" << std::endl;
+      } catch (const tlv::Error& e) {
+        std::cerr << verb << " " << param.getName() << " bad-response " << e.what() << std::endl;
       }
       scheduleNext(recur);
     },
@@ -255,6 +261,7 @@ main(int argc, char** argv)
                 "readvertise NLSR prefixes");
       addOption("nlsr-to-local", po::bool_switch(&toLocal), "readvertise to local NLSR instead");
       addOption("identity,i", po::value<Name>(), "signing identity");
+      addOption("expiry", po::value<uint32_t>(), "registration expiration (seconds)");
     });
 
   commands.push({ CommandKind::UPDATE_NEXTHOP, "" });
@@ -278,6 +285,9 @@ main(int argc, char** argv)
   }
   if (args.count("identity") > 0) {
     si = signingByIdentity(args["identity"].as<Name>());
+  }
+  if (args.count("expiry") > 0) {
+    regExpiration.emplace(1000 * args["expiry"].as<uint32_t>());
   }
 
   enableLocalFields(controller, runFrontCommand);
