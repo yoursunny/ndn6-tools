@@ -57,7 +57,7 @@ protected:
     Name klName;
     try {
       klName = getKeyLocatorName(InterestOrSigInfo(interest), *state);
-    } catch (const nonstd::bad_optional_access&) {
+    } catch (const std::bad_optional_access&) {
       state->fail(security::ValidationError::INVALID_KEY_LOCATOR);
     }
     continueValidation(std::make_shared<security::CertificateRequest>(klName), state);
@@ -87,7 +87,7 @@ authorize(const Name& prefix, const Interest& interest, const mgmt::ControlParam
     return;
   }
 
-  ndn::optional<Name> signer;
+  std::optional<Name> signer;
   try {
     auto si = interest.getSignatureInfo();
     if (!si) {

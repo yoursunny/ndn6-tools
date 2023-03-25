@@ -14,7 +14,7 @@ static SigningInfo si;
 static std::string faceUri;
 static std::shared_ptr<ndn::lp::NextHopFaceIdTag> nexthopTag;
 
-static ndn::optional<time::milliseconds> regExpiration;
+static std::optional<time::milliseconds> regExpiration;
 static bool toLocal = false;
 static Name nlsrRouter;
 static std::vector<Name> nlsrNamesFilter;

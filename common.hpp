@@ -4,6 +4,7 @@
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/lp/tags.hpp>
 #include <ndn-cxx/mgmt/nfd/controller.hpp>
+#include <ndn-cxx/mgmt/nfd/status-dataset.hpp>
 #include <ndn-cxx/security/certificate.hpp>
 #include <ndn-cxx/security/interest-signer.hpp>
 #include <ndn-cxx/security/key-chain.hpp>
