@@ -23,13 +23,15 @@ static std::set<Name> nlsrNames;
 class LsdbNamesDataset : public nfd::StatusDataset
 {
 public:
+  using Base = nfd::StatusDataset;
+
   LsdbNamesDataset()
-    : StatusDataset("nlsr/lsdb/names")
+    : Base("nlsr/lsdb/names")
   {}
 
   using ResultType = std::set<Name>;
 
-  ResultType parseResult(ndn::ConstBufferPtr payload)
+  ResultType parseResult(ndn::ConstBufferPtr payload) const
   {
     std::set<Name> names;
     size_t offset = 0;
