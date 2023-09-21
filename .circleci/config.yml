@@ -13,7 +13,7 @@ commands:
 jobs:
   build-ppa:
     docker:
-      - image: cimg/base:stable-18.04
+      - image: cimg/base:current-20.04
     resource_class: small
     steps:
       - checkout
@@ -23,7 +23,7 @@ jobs:
       - run: sudo make install
   build-nightly:
     docker:
-      - image: cimg/base:stable-20.04
+      - image: cimg/base:current-20.04
     resource_class: small
     steps:
       - checkout
@@ -40,11 +40,11 @@ jobs:
           git diff --exit-code
   debuild:
     docker:
-      - image: cimg/base:stable-20.04
+      - image: cimg/base:current-22.04
     resource_class: small
     steps:
       - run: |
-          echo "deb [trusted=yes] https://nfd-nightly-apt.ndn.today/ubuntu focal main" \
+          echo "deb [trusted=yes] https://nfd-nightly-apt.ndn.today/ubuntu jammy main" \
             | sudo tee /etc/apt/sources.list.d/nfd-nightly.list
           sudo apt-get update
           sudo apt-get install --no-install-recommends devscripts equivs lsb-release
