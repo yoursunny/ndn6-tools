@@ -5,7 +5,7 @@
 namespace ndn6::register_prefix_remote {
 
 static Face face;
-static Scheduler sched(face.getIoService());
+static Scheduler sched(face.getIoContext());
 static KeyChain keyChain;
 static nfd::Controller controller(face, keyChain);
 static InterestSigner cis(keyChain);
@@ -20,10 +20,10 @@ static Name nlsrRouter;
 static std::vector<Name> nlsrNamesFilter;
 static std::set<Name> nlsrNames;
 
-class LsdbNamesDataset : public nfd::StatusDataset
+class LsdbNamesDataset : public nfd::StatusDatasetBase
 {
 public:
-  using Base = nfd::StatusDataset;
+  using Base = nfd::StatusDatasetBase;
 
   LsdbNamesDataset()
     : Base("nlsr/lsdb/names")

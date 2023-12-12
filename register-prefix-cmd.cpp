@@ -63,7 +63,7 @@ main(int argc, char** argv)
   cis.makeSignedInterest(interest, si);
 
   Block wire = interest.wireEncode();
-  std::cout.write(reinterpret_cast<const char*>(wire.wire()), wire.size());
+  std::cout.write(reinterpret_cast<const char*>(wire.data()), wire.size());
   return 0;
 }
 

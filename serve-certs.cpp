@@ -10,7 +10,7 @@ class ServeCerts : boost::noncopyable
 public:
   explicit ServeCerts(Face& face, bool wantIntermediates)
     : m_face(face)
-    , m_sched(face.getIoService())
+    , m_sched(face.getIoContext())
     , m_wantIntermediates(wantIntermediates)
   {}
 
