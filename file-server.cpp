@@ -7,12 +7,6 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
-#ifndef STATX_TYPE
-// Debian 10: sys/stat.h declares STATX_TYPE etc, linux/stat.h would cause conflict
-// Ubuntu 18: sys/stat.h does not declare STATX_TYPE etc, linux/stat.h is needed and does not conflict
-#include <linux/stat.h>
-#endif
-
 namespace ndn6::file_server {
 
 namespace fs = boost::filesystem;
@@ -20,7 +14,7 @@ namespace fs = boost::filesystem;
 static const uint32_t STATX_REQUIRED = STATX_TYPE | STATX_MODE | STATX_MTIME | STATX_SIZE;
 static const uint32_t STATX_OPTIONAL = STATX_ATIME | STATX_CTIME | STATX_BTIME;
 static const uint64_t SEGMENT_SIZE = 6144;
-static const name::Component lsComponent = name::Component::fromEscapedString("32=ls");
+static const name::Component lsComponent(ndn::tlv::KeywordNameComponent, { 'l', 's' });
 #define ANY "[^<32=ls><32=metadata>]"
 
 enum
