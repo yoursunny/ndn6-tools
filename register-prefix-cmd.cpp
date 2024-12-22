@@ -16,7 +16,7 @@ main(int argc, char** argv)
 
   auto args = parseProgramOptions(
     argc, argv,
-    "Usage: ndn6-register-prefix-cmd [-u] -r /laptop-prefix -f 256 -i /identity\n"
+    "Usage: ndn6-register-prefix-cmd [-u] -p /laptop-prefix -f 256 -i /identity\n"
     "\n"
     "Prepare a prefix (un)registration command.\n"
     "\n",

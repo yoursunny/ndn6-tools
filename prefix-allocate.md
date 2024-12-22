@@ -20,21 +20,3 @@ The columns are: timestamp, RibMgmt status code (0 for success), FaceId, prefix.
 
 From a remote host, express an Interest for `ndn:/localhop/prefix-allocate/<random>`.  
 The response Data contains the allocated prefix in Content field as a Name element in TLV format.
-
-Example code for [NDN-JS](https://github.com/named-data/ndn-js):
-
-```js
-function allocatePrefix(face, onSuccess, onFailure) {
-  face.expressInterest(new ndn.Name('/localhop/prefix-allocate/' + Math.random()),
-    function(interest, data) {
-      var decoder = new ndn.TlvDecoder(new ndn.Blob(data.getContent(), true).buf());
-      var name = new ndn.Name();
-      ndn.Tlv0_1_1WireFormat.decodeName(name, decoder);
-      onSuccess(name);
-    },
-    function(interest) {
-      onFailure();
-    }
-  );
-}
-```
