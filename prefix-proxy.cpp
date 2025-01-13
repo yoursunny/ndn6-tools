@@ -49,11 +49,9 @@ static security::Validator validator(
       std::make_unique<security::ValidationPolicySimpleHierarchy>())),
   std::make_unique<security::CertificateFetcherDirectFetch>(face));
 static mgmt::Dispatcher dispatcher(face, keyChain);
-static nfd::RibRegisterCommand ribRegister;
-static nfd::RibUnregisterCommand ribUnregister;
 
 static void
-authorize(const Name& prefix, const Interest& interest, const mgmt::ControlParameters* params0,
+authorize(const Name& prefix, const Interest& interest, const mgmt::ControlParametersBase* params0,
           const mgmt::AcceptContinuation& accept, const mgmt::RejectContinuation& reject)
 {
   const auto& params = static_cast<const nfd::ControlParameters&>(*params0);
@@ -95,22 +93,14 @@ authorize(const Name& prefix, const Interest& interest, const mgmt::ControlParam
     });
 }
 
+template<typename Command>
 static void
-defineCommand(const nfd::ControlCommand* command, const ndn::PartialName& verb,
-              const std::function<void(uint64_t, const nfd::ControlParameters&,
+defineCommand(const std::function<void(uint64_t, const nfd::ControlParameters&,
                                        const mgmt::CommandContinuation&)>& handler)
 {
-  dispatcher.addControlCommand<nfd::ControlParameters>(
-    verb, authorize,
-    [=](const auto& params) {
-      try {
-        command->validateRequest(static_cast<const nfd::ControlParameters&>(params));
-        return true;
-      } catch (const nfd::ControlCommand::ArgumentError&) {
-        return false;
-      }
-    },
-    [=](const Name& prefix, const Interest& interest, const mgmt::ControlParameters& params,
+  dispatcher.addControlCommand<Command>(
+    authorize, //
+    [=](const Name& prefix, const Interest& interest, const mgmt::ControlParametersBase& params,
         const mgmt::CommandContinuation& done) {
       auto incomingFaceIdTag = interest.getTag<lp::IncomingFaceIdTag>();
       if (incomingFaceIdTag == nullptr) {
@@ -189,8 +179,8 @@ main(int argc, char** argv)
     face.registerPrefix(Name(listenPrefix).append(ndn::PartialName("rib/unregister")), nullptr,
                         abortOnRegisterFail, SigningInfo(), nfd::ROUTE_FLAG_CAPTURE);
 
-    defineCommand(&ribRegister, "rib/register", handleRegister);
-    defineCommand(&ribUnregister, "rib/unregister", handleUnregister);
+    defineCommand<nfd::RibRegisterCommand>(handleRegister);
+    defineCommand<nfd::RibUnregisterCommand>(handleUnregister);
     dispatcher.addTopPrefix(listenPrefix, false);
   });
 

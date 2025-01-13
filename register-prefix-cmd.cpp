@@ -48,18 +48,17 @@ main(int argc, char** argv)
     params.setFaceId(faceId);
   }
   params.setOrigin(static_cast<nfd::RouteOrigin>(origin));
-  std::unique_ptr<nfd::ControlCommand> command;
+  Interest interest;
   if (args.count("unregister") > 0) {
-    command = std::make_unique<nfd::RibUnregisterCommand>();
+    interest = nfd::RibUnregisterCommand::createRequest(commandPrefix, params);
   } else {
-    command = std::make_unique<nfd::RibRegisterCommand>();
     params.setFlags((args.count("no-inherit") > 0 ? 0 : nfd::ROUTE_FLAG_CHILD_INHERIT) |
                     (args.count("capture") > 0 ? nfd::ROUTE_FLAG_CAPTURE : 0));
+    interest = nfd::RibRegisterCommand::createRequest(commandPrefix, params);
   }
 
   KeyChain keyChain;
   InterestSigner cis(keyChain);
-  Interest interest(command->getRequestName(commandPrefix, params));
   cis.makeSignedInterest(interest, si);
 
   Block wire = interest.wireEncode();

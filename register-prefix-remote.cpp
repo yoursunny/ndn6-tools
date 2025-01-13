@@ -56,8 +56,8 @@ public:
 };
 
 static Name commandPrefix("/localhop/nfd");
-static nfd::RibRegisterCommand ribRegister;
-static nfd::RibUnregisterCommand ribUnregister;
+static auto ribRegister = nfd::RibRegisterCommand::createRequest;
+static auto ribUnregister = nfd::RibUnregisterCommand::createRequest;
 
 enum class CommandKind
 {
@@ -143,7 +143,7 @@ regUnregPrefix(const Command& cmd)
 
   bool recur = true;
   const char* verb = nullptr;
-  const nfd::ControlCommand* cc = nullptr;
+  const decltype(ribRegister)* cc = nullptr;
   nfd::ControlParameters param;
   param.setName(cmd.prefix);
   param.setOrigin(nfd::ROUTE_ORIGIN_CLIENT);
@@ -181,7 +181,7 @@ regUnregPrefix(const Command& cmd)
     }
   }
 
-  Interest interest(cc->getRequestName(commandPrefix, param));
+  Interest interest((*cc)(commandPrefix, param));
   cis.makeSignedInterest(interest, si);
   if (!toLocal) {
     interest.setTag(nexthopTag);

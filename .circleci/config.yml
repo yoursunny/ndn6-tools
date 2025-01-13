@@ -70,6 +70,6 @@ jobs:
 workflows:
   build:
     jobs:
-      - build-ppa
+      # - build-ppa
       - build-nightly
       - debuild

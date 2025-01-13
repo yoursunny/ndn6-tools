@@ -3,6 +3,7 @@
 
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/lp/tags.hpp>
+#include <ndn-cxx/mgmt/nfd/control-command.hpp>
 #include <ndn-cxx/mgmt/nfd/controller.hpp>
 #include <ndn-cxx/mgmt/nfd/status-dataset.hpp>
 #include <ndn-cxx/security/certificate.hpp>
