@@ -2,7 +2,7 @@ CXX ?= g++
 CXXFLAGS ?= -Wall -Werror -Wno-error=deprecated-declarations -O2 -g
 ALL_CXXFLAGS = $(CXXFLAGS) -std=c++17 `pkg-config --cflags libndn-cxx`
 LDFLAGS ?=
-LIBS ?= `pkg-config --libs libndn-cxx` -lboost_program_options
+LIBS ?= `pkg-config --libs libndn-cxx` -lboost_filesystem -lboost_program_options
 PREFIX ?= /usr/local
 DESTDIR ?=
 
