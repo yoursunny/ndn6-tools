@@ -8,10 +8,24 @@ This is compatible with [NDNts](https://yoursunny.com/p/NDNts/) `@ndn/cat` packa
 ### Start a Server
 
 ```bash
-ndn6-file-server /prefix /directory
+ndn6-file-server -b /prefix -d /directory
+
+ndn6-file-server -D /prefix -b /replica/prefix -d /directory
 ```
 
-The *prefix* should consist of only GenericNameComponents.
+* `--listen` or `-b` specifies the serve prefix (required).
+  The prefix should consist of only GenericNameComponents.
+  Both metadata and segments are served under this prefix.
+* `--discovery` or `-D` specifies a discovery prefix (optional).
+  The prefix should consist of only GenericNameComponents.
+  Only metadata packets are available under this prefix.
+  The `Name` field in the metadata points to the serve prefix.
+* `--directory` or `-d` specifies a local directory (required).
+  Contents of this directory are made available by the file server.
+  This must be an absolute path.
+* `--segment-size` or `-s` specifies the segment length (optional, defaults to 6144).
+  This shall be an integer between 1 and 8192.
+  Since segment packets can be cached, you should not change this setting after the file server is in operation.
 
 ### List Directory
 
@@ -43,6 +57,7 @@ The consumer first sends a [RDR discovery Interest](https://redmine.named-data.n
 * `/prefix/subdir/file.txt/32=metadata`: file retrieval
 * `/prefix/subdir/32=metadata`: refer to a directory without "32=ls" keyword
 
+The prefix portion may be either the discovery prefix or the serve prefix of the file server. 
 The Interest must have CanBePrefix and MustBeFresh, as per RDR specification.
 
 ### RDR Metadata

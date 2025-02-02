@@ -12,7 +12,6 @@ namespace fs = boost::filesystem;
 
 static const uint32_t STATX_REQUIRED = STATX_TYPE | STATX_MODE | STATX_MTIME | STATX_SIZE;
 static const uint32_t STATX_OPTIONAL = STATX_ATIME | STATX_CTIME | STATX_BTIME;
-static const uint64_t SEGMENT_SIZE = 6144;
 static const name::Component lsComponent(ndn::tlv::KeywordNameComponent, {'l', 's'});
 #define ANY "[^<32=ls><32=metadata>]"
 
@@ -28,7 +27,7 @@ enum {
 
 class SegmentLimit {
 public:
-  static SegmentLimit parse(const Name& name, uint64_t size) {
+  static SegmentLimit parse(const Name& name, uint64_t size, uint64_t segmentSize) {
     SegmentLimit sl;
     if (size == 0) {
       sl.ok = true;
@@ -36,16 +35,16 @@ public:
     }
 
     sl.segment = name[-1].toSegment();
-    sl.seekTo = sl.segment * SEGMENT_SIZE;
-    sl.lastSeg = computeLastSeg(size);
+    sl.seekTo = sl.segment * segmentSize;
+    sl.lastSeg = computeLastSeg(size, segmentSize);
     sl.segLen =
-      sl.segment == sl.lastSeg && size % SEGMENT_SIZE != 0 ? size % SEGMENT_SIZE : SEGMENT_SIZE;
+      sl.segment == sl.lastSeg && size % segmentSize != 0 ? size % segmentSize : segmentSize;
     sl.ok = sl.segment <= sl.lastSeg;
     return sl;
   }
 
-  static uint64_t computeLastSeg(uint64_t size) {
-    return size / SEGMENT_SIZE + static_cast<uint64_t>(size % SEGMENT_SIZE != 0) -
+  static uint64_t computeLastSeg(uint64_t size, uint64_t segmentSize) {
+    return size / segmentSize + static_cast<uint64_t>(size % segmentSize != 0) -
            static_cast<uint64_t>(size > 0);
   }
 
@@ -59,7 +58,9 @@ public:
 
 class FileInfo {
 public:
-  bool prepare(const fs::path& mountpoint, const ndn::PartialName& rel) {
+  bool prepare(const fs::path& mountpoint, const ndn::PartialName& rel, uint64_t segmentSize) {
+    this->segmentSize = segmentSize;
+
     path = mountpoint;
     for (const name::Component& comp : rel) {
       path /= std::string(reinterpret_cast<const char*>(comp.value()), comp.value_size());
@@ -97,11 +98,11 @@ public:
     content.push_back(versioned.wireEncode());
     if (isFile()) {
       Block finalBlockId(tlv::FinalBlockId);
-      uint64_t lastSeg = SegmentLimit::computeLastSeg(size());
+      uint64_t lastSeg = SegmentLimit::computeLastSeg(size(), segmentSize);
       finalBlockId.push_back(name::Component::fromSegment(lastSeg).wireEncode());
       finalBlockId.encode();
       content.push_back(finalBlockId);
-      content.push_back(ndn::encoding::makeNonNegativeIntegerBlock(TtSegmentSize, SEGMENT_SIZE));
+      content.push_back(ndn::encoding::makeNonNegativeIntegerBlock(TtSegmentSize, segmentSize));
       content.push_back(ndn::encoding::makeNonNegativeIntegerBlock(TtSize, size()));
     }
     content.push_back(ndn::encoding::makeNonNegativeIntegerBlock(TtMode, st.stx_mode));
@@ -135,34 +136,45 @@ public:
   fs::path path;
   struct statx st;
   Name versioned;
+  uint64_t segmentSize;
 };
 
 class FileServer : boost::noncopyable {
 public:
-  explicit FileServer(Face& face, KeyChain& keyChain, const Name& prefix, const fs::path& directory)
+  explicit FileServer(Face& face, KeyChain& keyChain, const Name& servePrefix,
+                      const Name& discoveryPrefix, const fs::path& directory, int segmentSize)
     : m_face(face)
     , m_keyChain(keyChain)
-    , m_prefix(prefix)
-    , m_directory(directory) {
-    face.registerPrefix(prefix, nullptr, abortOnRegisterFail);
-    face.setInterestFilter(InterestFilter(prefix, ANY "*<32=metadata>"),
-                           [this](const auto&, const auto& interest) { rdrFile(interest); });
-    face.setInterestFilter(InterestFilter(prefix, ANY "{2,}"),
-                           [this](const auto&, const auto& interest) { readFile(interest); });
-    face.setInterestFilter(InterestFilter(prefix, ANY "*<32=ls><32=metadata>"),
-                           [this](const auto&, const auto& interest) { rdrDir(interest); });
-    face.setInterestFilter(InterestFilter(prefix, ANY "*<32=ls>" ANY "{2}"),
-                           [this](const auto&, const auto& interest) { readDir(interest); });
+    , m_servePrefix(servePrefix)
+    , m_directory(directory)
+    , m_segmentSize(segmentSize) {
+    std::vector<Name> prefixes{servePrefix};
+    if (!discoveryPrefix.equals(servePrefix)) {
+      prefixes.push_back(discoveryPrefix);
+    }
+    for (const Name& prefix : prefixes) {
+      face.registerPrefix(prefix, nullptr, abortOnRegisterFail);
+      face.setInterestFilter(InterestFilter(prefix, ANY "*<32=metadata>"),
+                             std::bind(&FileServer::rdrFile, this, _1, _2));
+      face.setInterestFilter(InterestFilter(prefix, ANY "*<32=ls><32=metadata>"),
+                             std::bind(&FileServer::rdrDir, this, _1, _2));
+    }
+    face.setInterestFilter(InterestFilter(servePrefix, ANY "{2,}"),
+                           std::bind(&FileServer::readFile, this, _1, _2));
+    face.setInterestFilter(InterestFilter(servePrefix, ANY "*<32=ls>" ANY "{2}"),
+                           std::bind(&FileServer::readDir, this, _1, _2));
   }
 
 private:
-  FileInfo parseInterestName(const Name& name, int suffixLen) {
-    auto rel = name.getSubName(m_prefix.size(), name.size() - m_prefix.size() - suffixLen);
+  FileInfo parseInterestName(const ndn::InterestFilter& filter, const Name& name, int suffixLen) {
+    size_t prefixLen = filter.getPrefix().size();
+    auto rel = name.getSubName(prefixLen, name.size() - prefixLen - suffixLen);
     FileInfo info;
-    if (!info.prepare(m_directory, rel)) {
+    if (!info.prepare(m_directory, rel, m_segmentSize)) {
       return FileInfo{};
     }
-    info.versioned = name.getPrefix(-suffixLen);
+    info.versioned = m_servePrefix;
+    info.versioned.append(rel);
     if (info.isDir()) {
       info.versioned.append(lsComponent);
     }
@@ -170,15 +182,15 @@ private:
     return info;
   }
 
-  void rdrFile(const Interest& interest) {
+  void rdrFile(const ndn::InterestFilter& filter, const Interest& interest) {
     auto name = interest.getName();
-    auto info = parseInterestName(name, 1);
+    auto info = parseInterestName(filter, name, 1);
     replyRdr("RDR-FILE", name, info, info.isFile() || info.isDir());
   }
 
-  void rdrDir(const Interest& interest) {
+  void rdrDir(const ndn::InterestFilter& filter, const Interest& interest) {
     auto name = interest.getName();
-    auto info = parseInterestName(name, 2);
+    auto info = parseInterestName(filter, name, 2);
     replyRdr("RDR-DIR", name, info, info.isDir());
   }
 
@@ -198,14 +210,14 @@ private:
     std::cout << act << "-OK" << '\t' << info.path << '\t' << info.versioned << std::endl;
   }
 
-  void readFile(const Interest& interest) {
+  void readFile(const ndn::InterestFilter& filter, const Interest& interest) {
     auto name = interest.getName();
-    auto info = parseInterestName(name, 2);
+    auto info = parseInterestName(filter, name, 2);
     if (!info.isFile() || !info.checkSegmentInterestName(name)) {
       return;
     }
 
-    auto sl = SegmentLimit::parse(name, info.size());
+    auto sl = SegmentLimit::parse(name, info.size(), m_segmentSize);
     if (!sl.ok) {
       return;
     }
@@ -214,9 +226,9 @@ private:
     replySegment("READ-FILE", name, info, sl, stream);
   }
 
-  void readDir(const Interest& interest) {
+  void readDir(const ndn::InterestFilter& filter, const Interest& interest) {
     auto name = interest.getName();
-    auto info = parseInterestName(name, 3);
+    auto info = parseInterestName(filter, name, 3);
     if (!info.isDir() || !info.checkSegmentInterestName(name)) {
       return;
     }
@@ -241,7 +253,7 @@ private:
       stream << filename << '\0';
     }
 
-    auto sl = SegmentLimit::parse(name, stream.tellp());
+    auto sl = SegmentLimit::parse(name, stream.tellp(), m_segmentSize);
     if (!sl.ok) {
       return;
     }
@@ -252,7 +264,7 @@ private:
   void replySegment(const char* act, const Name& name, const FileInfo& info, const SegmentLimit& sl,
                     std::istream& stream) {
     stream.seekg(sl.seekTo);
-    uint8_t buf[SEGMENT_SIZE];
+    uint8_t buf[m_segmentSize];
     stream.read(reinterpret_cast<char*>(buf), sl.segLen);
     if (!stream) {
       std::cout << act << "-ERROR" << '\t' << info.path << '\t' << sl.segment << std::endl;
@@ -278,21 +290,42 @@ private:
 private:
   Face& m_face;
   KeyChain& m_keyChain;
-  Name m_prefix;
+  Name m_servePrefix;
   fs::path m_directory;
+  uint64_t m_segmentSize;
 };
 
 int
 main(int argc, char** argv) {
-  if (argc != 3) {
-    std::cerr << "ndn6-file-server prefix directory" << std::endl;
-    return 2;
+  Name servePrefix;
+  Name discoveryPrefix;
+  fs::path directory;
+  int segmentSize = 6144;
+  auto args = parseProgramOptions(
+    argc, argv,
+    "Usage: ndn6-file-server\n"
+    "\n"
+    "Serve files from a directory.\n"
+    "\n",
+    [&](auto addOption) {
+      addOption("listen,b", po::value(&servePrefix)->required(), "serve prefix");
+      addOption("discovery,D", po::value(&discoveryPrefix), "discovery prefix");
+      addOption("directory,d", po::value(&directory)->required(), "local directory");
+      addOption("segment-size,s", po::value(&segmentSize)->notifier([](uint64_t v) {
+        if (!(v >= 1 && v <= 8192)) {
+          throw std::range_error("segment-size must be between 1 and 8192");
+        }
+      }),
+                "segment size");
+    });
+  if (args.count("discovery") == 0) {
+    discoveryPrefix = servePrefix;
   }
 
   name::setConventionDecoding(name::Convention::TYPED);
   ndn::Face face;
   ndn::KeyChain keyChain;
-  FileServer app(face, keyChain, argv[1], argv[2]);
+  FileServer app(face, keyChain, servePrefix, discoveryPrefix, directory, segmentSize);
   face.processEvents();
   return 0;
 }
