@@ -20,19 +20,16 @@ static Name nlsrRouter;
 static std::vector<Name> nlsrNamesFilter;
 static std::set<Name> nlsrNames;
 
-class LsdbNamesDataset : public nfd::StatusDatasetBase
-{
+class LsdbNamesDataset : public nfd::StatusDatasetBase {
 public:
   using Base = nfd::StatusDatasetBase;
 
   LsdbNamesDataset()
-    : Base("nlsr/lsdb/names")
-  {}
+    : Base("nlsr/lsdb/names") {}
 
   using ResultType = std::set<Name>;
 
-  ResultType parseResult(ndn::ConstBufferPtr payload) const
-  {
+  ResultType parseResult(ndn::ConstBufferPtr payload) const {
     std::set<Name> names;
     size_t offset = 0;
     while (offset < payload->size()) {
@@ -59,8 +56,7 @@ static Name commandPrefix("/localhop/nfd");
 static auto ribRegister = nfd::RibRegisterCommand::createRequest;
 static auto ribUnregister = nfd::RibUnregisterCommand::createRequest;
 
-enum class CommandKind
-{
+enum class CommandKind {
   SENTINEL,
   UPDATE_NEXTHOP,
   REGISTER,
@@ -69,8 +65,7 @@ enum class CommandKind
   NLSR_SYNC,
 };
 
-struct Command
-{
+struct Command {
   CommandKind kind;
   Name prefix;
 };
@@ -81,8 +76,7 @@ static void
 scheduleNext(bool recur = true);
 
 static void
-updateNexthop()
-{
+updateNexthop() {
   controller.fetch<nfd::FaceQueryDataset>(
     nfd::FaceQueryFilter().setRemoteUri(faceUri),
     [](const std::vector<nfd::FaceStatus>& faces) {
@@ -107,8 +101,7 @@ updateNexthop()
 }
 
 static void
-updateNlsrDataset()
-{
+updateNlsrDataset() {
   controller.fetch<LsdbNamesDataset>(
     [](const std::set<Name>& dataset) {
       std::set<Name> acceptNames;
@@ -120,7 +113,7 @@ updateNlsrDataset()
         acceptNames.insert(name);
         if (nlsrNames.count(name) == 0) {
           std::cerr << "LSDB-names new " << name << std::endl;
-          commands.push({ CommandKind::NLSR_SYNC, name });
+          commands.push({CommandKind::NLSR_SYNC, name});
         }
       }
       nlsrNames.swap(acceptNames);
@@ -134,8 +127,7 @@ updateNlsrDataset()
 }
 
 static void
-regUnregPrefix(const Command& cmd)
-{
+regUnregPrefix(const Command& cmd) {
   if (nexthopTag == nullptr) {
     scheduleNext();
     return;
@@ -209,8 +201,7 @@ regUnregPrefix(const Command& cmd)
 }
 
 static void
-runFrontCommand()
-{
+runFrontCommand() {
   const auto& cmd = commands.front();
   switch (cmd.kind) {
     case CommandKind::SENTINEL:
@@ -231,8 +222,7 @@ runFrontCommand()
 }
 
 static void
-scheduleNext(bool recur)
-{
+scheduleNext(bool recur) {
   auto cmd = commands.front();
   commands.pop();
   auto delay = cmd.kind == CommandKind::SENTINEL ? 60_s : 2_s;
@@ -244,8 +234,7 @@ scheduleNext(bool recur)
 }
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   auto args = parseProgramOptions(
     argc, argv,
     "Usage: ndn6-register-prefix-remote -f udp4://192.0.2.1:6363 -p /prefix -i /identity\n"
@@ -266,21 +255,21 @@ main(int argc, char** argv)
       addOption("expiry", po::value<uint32_t>(), "registration expiration (seconds)");
     });
 
-  commands.push({ CommandKind::UPDATE_NEXTHOP, "" });
+  commands.push({CommandKind::UPDATE_NEXTHOP, ""});
   if (args.count("undo-autoreg") > 0) {
     for (const Name& prefix : args["undo-autoreg"].as<std::vector<Name>>()) {
-      commands.push({ CommandKind::UNDO_AUTOREG, prefix });
+      commands.push({CommandKind::UNDO_AUTOREG, prefix});
     }
   }
   if (args.count("prefix") > 0) {
     for (const Name& prefix : args["prefix"].as<std::vector<Name>>()) {
-      commands.push({ CommandKind::REGISTER, prefix });
+      commands.push({CommandKind::REGISTER, prefix});
     }
   }
   if (!nlsrNamesFilter.empty()) {
-    commands.push({ CommandKind::UPDATE_NLSR_DATASET, "" });
+    commands.push({CommandKind::UPDATE_NLSR_DATASET, ""});
   }
-  commands.push({ CommandKind::SENTINEL, "" });
+  commands.push({CommandKind::SENTINEL, ""});
 
   if (toLocal) {
     commandPrefix = "/localhost/nfd";
@@ -300,7 +289,6 @@ main(int argc, char** argv)
 } // namespace ndn6::register_prefix_remote
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   return ndn6::register_prefix_remote::main(argc, argv);
 }

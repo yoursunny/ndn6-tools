@@ -5,8 +5,7 @@
 namespace ndn6::register_prefix_cmd {
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   Name prefix;
   Name commandPrefix("/localhop/nfd");
   int faceId = -1;
@@ -69,7 +68,6 @@ main(int argc, char** argv)
 } // namespace ndn6::register_prefix_cmd
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   return ndn6::register_prefix_cmd::main(argc, argv);
 }

@@ -14,11 +14,10 @@ namespace fs = boost::filesystem;
 static const uint32_t STATX_REQUIRED = STATX_TYPE | STATX_MODE | STATX_MTIME | STATX_SIZE;
 static const uint32_t STATX_OPTIONAL = STATX_ATIME | STATX_CTIME | STATX_BTIME;
 static const uint64_t SEGMENT_SIZE = 6144;
-static const name::Component lsComponent(ndn::tlv::KeywordNameComponent, { 'l', 's' });
+static const name::Component lsComponent(ndn::tlv::KeywordNameComponent, {'l', 's'});
 #define ANY "[^<32=ls><32=metadata>]"
 
-enum
-{
+enum {
   TtSegmentSize = 0xF500,
   TtSize = 0xF502,
   TtMode = 0xF504,
@@ -28,11 +27,9 @@ enum
   TtMtime = 0xF50C,
 };
 
-class SegmentLimit
-{
+class SegmentLimit {
 public:
-  static SegmentLimit parse(const Name& name, uint64_t size)
-  {
+  static SegmentLimit parse(const Name& name, uint64_t size) {
     SegmentLimit sl;
     if (size == 0) {
       sl.ok = true;
@@ -48,8 +45,7 @@ public:
     return sl;
   }
 
-  static uint64_t computeLastSeg(uint64_t size)
-  {
+  static uint64_t computeLastSeg(uint64_t size) {
     return size / SEGMENT_SIZE + static_cast<uint64_t>(size % SEGMENT_SIZE != 0) -
            static_cast<uint64_t>(size > 0);
   }
@@ -62,11 +58,9 @@ public:
   uint64_t lastSeg = 0;
 };
 
-class FileInfo
-{
+class FileInfo {
 public:
-  bool prepare(const fs::path& mountpoint, const ndn::PartialName& rel)
-  {
+  bool prepare(const fs::path& mountpoint, const ndn::PartialName& rel) {
     path = mountpoint;
     for (const name::Component& comp : rel) {
       path /= std::string(reinterpret_cast<const char*>(comp.value()), comp.value_size());
@@ -79,33 +73,27 @@ public:
     return res == 0 && has(STATX_REQUIRED);
   }
 
-  size_t size() const
-  {
+  size_t size() const {
     return st.stx_size;
   }
 
-  bool isFile() const
-  {
+  bool isFile() const {
     return S_ISREG(st.stx_mode);
   }
 
-  bool isDir() const
-  {
+  bool isDir() const {
     return S_ISDIR(st.stx_mode);
   }
 
-  uint64_t mtime() const
-  {
+  uint64_t mtime() const {
     return timestamp(st.stx_mtime);
   }
 
-  bool checkSegmentInterestName(const Name& name) const
-  {
+  bool checkSegmentInterestName(const Name& name) const {
     return versioned.isPrefixOf(name) && name[-1].isSegment();
   }
 
-  Block buildMetadata() const
-  {
+  Block buildMetadata() const {
     Block content(tlv::Content);
     content.push_back(versioned.wireEncode());
     if (isFile()) {
@@ -136,13 +124,11 @@ public:
   }
 
 private:
-  bool has(uint32_t bit) const
-  {
+  bool has(uint32_t bit) const {
     return (st.stx_mask & bit) == bit;
   }
 
-  uint64_t timestamp(struct statx_timestamp t) const
-  {
+  uint64_t timestamp(struct statx_timestamp t) const {
     return static_cast<uint64_t>(t.tv_sec) * 1000000000 + t.tv_nsec;
   }
 
@@ -152,15 +138,13 @@ public:
   Name versioned;
 };
 
-class FileServer : boost::noncopyable
-{
+class FileServer : boost::noncopyable {
 public:
   explicit FileServer(Face& face, KeyChain& keyChain, const Name& prefix, const fs::path& directory)
     : m_face(face)
     , m_keyChain(keyChain)
     , m_prefix(prefix)
-    , m_directory(directory)
-  {
+    , m_directory(directory) {
     face.registerPrefix(prefix, nullptr, abortOnRegisterFail);
     face.setInterestFilter(InterestFilter(prefix, ANY "*<32=metadata>"),
                            [this](const auto&, const auto& interest) { rdrFile(interest); });
@@ -173,8 +157,7 @@ public:
   }
 
 private:
-  FileInfo parseInterestName(const Name& name, int suffixLen)
-  {
+  FileInfo parseInterestName(const Name& name, int suffixLen) {
     auto rel = name.getSubName(m_prefix.size(), name.size() - m_prefix.size() - suffixLen);
     FileInfo info;
     if (!info.prepare(m_directory, rel)) {
@@ -188,22 +171,19 @@ private:
     return info;
   }
 
-  void rdrFile(const Interest& interest)
-  {
+  void rdrFile(const Interest& interest) {
     auto name = interest.getName();
     auto info = parseInterestName(name, 1);
     replyRdr("RDR-FILE", name, info, info.isFile() || info.isDir());
   }
 
-  void rdrDir(const Interest& interest)
-  {
+  void rdrDir(const Interest& interest) {
     auto name = interest.getName();
     auto info = parseInterestName(name, 2);
     replyRdr("RDR-DIR", name, info, info.isDir());
   }
 
-  void replyRdr(const char* act, Name name, const FileInfo& info, bool found)
-  {
+  void replyRdr(const char* act, Name name, const FileInfo& info, bool found) {
     if (!found) {
       replyNack(name);
       std::cout << act << "-NOT-FOUND" << '\t' << info.path << std::endl;
@@ -219,8 +199,7 @@ private:
     std::cout << act << "-OK" << '\t' << info.path << '\t' << info.versioned << std::endl;
   }
 
-  void readFile(const Interest& interest)
-  {
+  void readFile(const Interest& interest) {
     auto name = interest.getName();
     auto info = parseInterestName(name, 2);
     if (!info.isFile() || !info.checkSegmentInterestName(name)) {
@@ -236,8 +215,7 @@ private:
     replySegment("READ-FILE", name, info, sl, stream);
   }
 
-  void readDir(const Interest& interest)
-  {
+  void readDir(const Interest& interest) {
     auto name = interest.getName();
     auto info = parseInterestName(name, 3);
     if (!info.isDir() || !info.checkSegmentInterestName(name)) {
@@ -273,8 +251,7 @@ private:
   }
 
   void replySegment(const char* act, const Name& name, const FileInfo& info, const SegmentLimit& sl,
-                    std::istream& stream)
-  {
+                    std::istream& stream) {
     stream.seekg(sl.seekTo);
     uint8_t buf[SEGMENT_SIZE];
     stream.read(reinterpret_cast<char*>(buf), sl.segLen);
@@ -291,8 +268,7 @@ private:
     std::cout << act << "-OK" << '\t' << info.path << '\t' << sl.segment << std::endl;
   }
 
-  void replyNack(const Name& name)
-  {
+  void replyNack(const Name& name) {
     Data data(name);
     data.setContentType(tlv::ContentType_Nack);
     data.setFreshnessPeriod(1_ms);
@@ -308,8 +284,7 @@ private:
 };
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   if (argc != 3) {
     std::cerr << "ndn6-file-server prefix directory" << std::endl;
     return 2;
@@ -326,7 +301,6 @@ main(int argc, char** argv)
 } // namespace ndn6::file_server
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   return ndn6::file_server::main(argc, argv);
 }

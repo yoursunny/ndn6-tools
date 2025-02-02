@@ -5,8 +5,7 @@
 namespace ndn6::facemon {
 
 void
-printInterest(const Name& prefix, const Interest& interest)
-{
+printInterest(const Name& prefix, const Interest& interest) {
   auto incomingFace = interest.getTag<lp::IncomingFaceIdTag>();
   if (incomingFace == nullptr) {
     return;
@@ -20,8 +19,7 @@ printInterest(const Name& prefix, const Interest& interest)
 }
 
 void
-printNotification(const nfd::FaceEventNotification& n)
-{
+printNotification(const nfd::FaceEventNotification& n) {
   std::cout << ::time(0) << '\t';
   switch (n.getKind()) {
     case nfd::FACE_EVENT_CREATED:
@@ -39,8 +37,7 @@ printNotification(const nfd::FaceEventNotification& n)
 }
 
 int
-main()
-{
+main() {
   Face face;
   KeyChain keyChain;
 
@@ -59,7 +56,6 @@ main()
 } // namespace ndn6::facemon
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   return ndn6::facemon::main();
 }

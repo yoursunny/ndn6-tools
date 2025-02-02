@@ -9,25 +9,21 @@ namespace ndn6::prefix_proxy {
 namespace mgmt = ndn::mgmt;
 namespace security = ndn::security;
 
-class ValidationPolicyPassInterest : public security::ValidationPolicy
-{
+class ValidationPolicyPassInterest : public security::ValidationPolicy {
 public:
-  explicit ValidationPolicyPassInterest(std::unique_ptr<security::ValidationPolicy> inner)
-  {
+  explicit ValidationPolicyPassInterest(std::unique_ptr<security::ValidationPolicy> inner) {
     setInnerPolicy(std::move(inner));
   }
 
 protected:
   void checkPolicy(const Data& data, const std::shared_ptr<security::ValidationState>& state,
-                   const ValidationContinuation& continueValidation) override
-  {
+                   const ValidationContinuation& continueValidation) override {
     getInnerPolicy().checkPolicy(data, state, continueValidation);
   }
 
   void checkPolicy(const Interest& interest,
                    const std::shared_ptr<security::ValidationState>& state,
-                   const ValidationContinuation& continueValidation) override
-  {
+                   const ValidationContinuation& continueValidation) override {
     const auto& si = interest.getSignatureInfo();
     if (!si) {
       state->fail(security::ValidationError::INVALID_KEY_LOCATOR);
@@ -52,8 +48,7 @@ static mgmt::Dispatcher dispatcher(face, keyChain);
 
 static void
 authorize(const Name& prefix, const Interest& interest, const mgmt::ControlParametersBase* params0,
-          const mgmt::AcceptContinuation& accept, const mgmt::RejectContinuation& reject)
-{
+          const mgmt::AcceptContinuation& accept, const mgmt::RejectContinuation& reject) {
   const auto& params = static_cast<const nfd::ControlParameters&>(*params0);
   if (!params.hasName()) {
     reject(mgmt::RejectReply::SILENT);
@@ -96,8 +91,7 @@ authorize(const Name& prefix, const Interest& interest, const mgmt::ControlParam
 template<typename Command>
 static void
 defineCommand(const std::function<void(uint64_t, const nfd::ControlParameters&,
-                                       const mgmt::CommandContinuation&)>& handler)
-{
+                                       const mgmt::CommandContinuation&)>& handler) {
   dispatcher.addControlCommand<Command>(
     authorize, //
     [=](const Name& prefix, const Interest& interest, const mgmt::ControlParametersBase& params,
@@ -114,8 +108,7 @@ defineCommand(const std::function<void(uint64_t, const nfd::ControlParameters&,
 template<typename Command>
 static void
 proxyCommand(char verb, uint64_t client, nfd::ControlParameters params,
-             mgmt::CommandContinuation done)
-{
+             mgmt::CommandContinuation done) {
   params.setFaceId(client);
   controller.start<Command>(
     params,
@@ -134,21 +127,18 @@ proxyCommand(char verb, uint64_t client, nfd::ControlParameters params,
 
 static void
 handleRegister(uint64_t client, const nfd::ControlParameters& params,
-               const mgmt::CommandContinuation& done)
-{
+               const mgmt::CommandContinuation& done) {
   proxyCommand<nfd::RibRegisterCommand>('R', client, params, done);
 }
 
 static void
 handleUnregister(uint64_t client, const nfd::ControlParameters& params,
-                 const mgmt::CommandContinuation& done)
-{
+                 const mgmt::CommandContinuation& done) {
   proxyCommand<nfd::RibUnregisterCommand>('U', client, params, done);
 }
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   Name listenPrefix("/localhop/nfd");
   auto args = parseProgramOptions(
     argc, argv,
@@ -191,7 +181,6 @@ main(int argc, char** argv)
 } // namespace ndn6::prefix_proxy
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   return ndn6::prefix_proxy::main(argc, argv);
 }

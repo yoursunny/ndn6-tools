@@ -29,8 +29,7 @@ namespace po = boost::program_options;
 inline po::variables_map
 parseProgramOptions(int argc, char** argv, const char* usage,
                     const std::function<void(po::options_description_easy_init)>& declare,
-                    const char* positionalOption = nullptr, int positionalMax = -1)
-{
+                    const char* positionalOption = nullptr, int positionalMax = -1) {
   po::options_description options("Options");
   auto addOption = options.add_options();
   addOption("help,h", "print help message");
@@ -81,8 +80,7 @@ using ndn::security::InterestSigner;
 using ndn::security::SigningInfo;
 
 inline void
-enableLocalFields(nfd::Controller& controller, const std::function<void()>& then = nullptr)
-{
+enableLocalFields(nfd::Controller& controller, const std::function<void()>& then = nullptr) {
   controller.start<nfd::FaceUpdateCommand>(
     nfd::ControlParameters().setFlagBit(nfd::FaceFlagBit::BIT_LOCAL_FIELDS_ENABLED, true),
     [&](const auto& cp) {
@@ -98,8 +96,7 @@ enableLocalFields(nfd::Controller& controller, const std::function<void()>& then
 }
 
 inline void
-abortOnRegisterFail(const Name& name, const std::string& message)
-{
+abortOnRegisterFail(const Name& name, const std::string& message) {
   std::cerr << "RegisterPrefix error " << name << " " << message << std::endl;
   std::exit(1);
 }

@@ -1,6 +1,6 @@
 # ndn6-tools
 
-[![CircleCI build status](https://img.shields.io/circleci/build/github/yoursunny/ndn6-tools)](https://app.circleci.com/pipelines/github/yoursunny/ndn6-tools?style=flat) [![GitHub code size](https://img.shields.io/github/languages/code-size/yoursunny/ndn6-tools?style=flat)](https://github.com/yoursunny/ndn6-tools)
+[![CircleCI build status](https://img.shields.io/circleci/build/github/yoursunny/ndn6-tools?style=flat)](https://app.circleci.com/pipelines/github/yoursunny/ndn6-tools) [![GitHub code size](https://img.shields.io/github/languages/code-size/yoursunny/ndn6-tools?style=flat)](https://github.com/yoursunny/ndn6-tools)
 
 This repository contains tools running in [yoursunny ndn6 network](https://yoursunny.com/p/ndn6/).
 

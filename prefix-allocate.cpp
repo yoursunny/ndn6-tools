@@ -4,16 +4,13 @@ namespace ndn6::prefix_allocate {
 
 static const int ORIGIN_ALLOCATE = 22804;
 
-class PrefixAllocate : boost::noncopyable
-{
+class PrefixAllocate : boost::noncopyable {
 public:
   explicit PrefixAllocate(const Name& prefix)
     : m_controller(m_face, m_keyChain)
-    , m_prefix(prefix)
-  {}
+    , m_prefix(prefix) {}
 
-  void run()
-  {
+  void run() {
     enableLocalFields(m_controller);
     m_face.setInterestFilter("/localhop/prefix-allocate",
                              std::bind(&PrefixAllocate::processCommand, this, _2),
@@ -22,8 +19,7 @@ public:
   }
 
 private:
-  void processCommand(const Interest& interest)
-  {
+  void processCommand(const Interest& interest) {
     auto incomingFaceIdTag = interest.getTag<lp::IncomingFaceIdTag>();
     if (incomingFaceIdTag == nullptr) {
       return;
@@ -45,8 +41,7 @@ private:
       bind(&PrefixAllocate::onRegisterFail, this, p, _1));
   }
 
-  void onRegisterSucceed(const nfd::ControlParameters& p, const Interest& interest)
-  {
+  void onRegisterSucceed(const nfd::ControlParameters& p, const Interest& interest) {
     auto data = std::make_shared<Data>(interest.getName());
     data->setContent(p.getName().wireEncode());
     m_keyChain.sign(*data);
@@ -56,8 +51,7 @@ private:
               << std::endl;
   }
 
-  void onRegisterFail(const nfd::ControlParameters& p, const nfd::ControlResponse& resp)
-  {
+  void onRegisterFail(const nfd::ControlParameters& p, const nfd::ControlResponse& resp) {
     std::cout << ::time(nullptr) << '\t' << resp.getCode() << '\t' << p.getFaceId() << '\t'
               << p.getName() << std::endl;
   }
@@ -70,8 +64,7 @@ private:
 };
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   if (argc != 2) {
     std::cerr << "ndn6-prefix-allocate /prefix" << std::endl;
     return -1;
@@ -86,7 +79,6 @@ main(int argc, char** argv)
 } // namespace ndn6::prefix_allocate
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   return ndn6::prefix_allocate::main(argc, argv);
 }

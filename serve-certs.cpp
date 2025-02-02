@@ -5,17 +5,14 @@ namespace ndn6::serve_certs {
 const auto FETCH_TIMEOUT = 7777_ms;
 const auto FETCH_RETRY = 7222_ms;
 
-class ServeCerts : boost::noncopyable
-{
+class ServeCerts : boost::noncopyable {
 public:
   explicit ServeCerts(Face& face, bool wantIntermediates)
     : m_face(face)
     , m_sched(face.getIoContext())
-    , m_wantIntermediates(wantIntermediates)
-  {}
+    , m_wantIntermediates(wantIntermediates) {}
 
-  void add(const Data& data)
-  {
+  void add(const Data& data) {
     auto certName = data.getName();
     auto keyName = ndn::security::extractKeyNameFromCertName(data.getName());
     if (m_serving.count(keyName) > 0) {
@@ -45,8 +42,7 @@ public:
   }
 
 private:
-  void gatherIntermediate(const Data& data)
-  {
+  void gatherIntermediate(const Data& data) {
     auto issuer = data.getKeyLocator()->getName();
     bool isCertName = Certificate::isValidName(issuer);
     auto keyName = isCertName ? ndn::security::extractKeyNameFromCertName(issuer) : issuer;
@@ -63,8 +59,7 @@ private:
     fetchAdd(interest);
   }
 
-  void fetchAdd(const Interest& interest)
-  {
+  void fetchAdd(const Interest& interest) {
     std::cout << "<I\t" << interest.getName() << std::endl;
     m_fetching.emplace(interest.getName(), m_sched.schedule(FETCH_RETRY, [this, interest] {
       std::cout << ">T\t" << interest.getName() << std::endl;
@@ -101,8 +96,7 @@ private:
 };
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   bool wantIntermediates = false;
   std::vector<std::string> certFiles;
   auto args = parseProgramOptions(
@@ -137,7 +131,6 @@ main(int argc, char** argv)
 } // namespace ndn6::serve_certs
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   return ndn6::serve_certs::main(argc, argv);
 }

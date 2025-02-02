@@ -3,8 +3,7 @@
 namespace ndn6::unix_time_service {
 
 int
-main()
-{
+main() {
   Face face;
   KeyChain keyChain;
   Name prefix = "/localhop/unix-time";
@@ -27,7 +26,6 @@ main()
 } // namespace ndn6::unix_time_service
 
 int
-main(int argc, char** argv)
-{
+main(int argc, char** argv) {
   return ndn6::unix_time_service::main();
 }
