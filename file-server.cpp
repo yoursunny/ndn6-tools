@@ -4,7 +4,6 @@
 #include <boost/filesystem/fstream.hpp>
 
 #include <sys/stat.h>
-#include <sys/syscall.h>
 #include <unistd.h>
 
 namespace ndn6::file_server {
@@ -69,7 +68,7 @@ public:
       }
     }
 
-    int res = syscall(__NR_statx, -1, path.c_str(), 0, STATX_REQUIRED | STATX_OPTIONAL, &st);
+    int res = statx(-1, path.c_str(), 0, STATX_REQUIRED | STATX_OPTIONAL, &st);
     return res == 0 && has(STATX_REQUIRED);
   }
 
