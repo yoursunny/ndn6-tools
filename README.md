@@ -4,6 +4,8 @@
 
 This repository contains tools running in [yoursunny ndn6 network](https://yoursunny.com/p/ndn6/).
 
+![ndn6-tools logo](logo.svg)
+
 ## Available Tools
 
 [ndn6-facemon](facemon.md): log when a face is created or destroyed
@@ -36,7 +38,7 @@ To install binary package:
 Requirements:
 
 * Ubuntu 22.04, Ubuntu 24.04, Debian 12
-* [ndn-cxx](https://named-data.net/doc/ndn-cxx/) installed from PPA or [NFD-nightly](https://nfd-nightly.ndn.today/) `libndn-cxx-dev` package
+* [ndn-cxx](https://named-data.net/doc/ndn-cxx/) installed from source or [NFD-nightly](https://nfd-nightly.ndn.today/) `libndn-cxx-dev` package
 
 To compile and install:
 
