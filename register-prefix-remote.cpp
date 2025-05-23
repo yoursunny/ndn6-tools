@@ -43,8 +43,15 @@ public:
 
       lsa.parse();
       for (const auto& element : lsa.elements()) {
-        if (element.type() == tlv::Name) {
-          names.emplace(element);
+        switch (element.type()) {
+          case tlv::Name:
+            names.emplace(element);
+            break;
+          case 0x92: { // PrefixInfo
+            element.parse();
+            names.emplace(element.get(tlv::Name));
+            break;
+          }
         }
       }
     }
