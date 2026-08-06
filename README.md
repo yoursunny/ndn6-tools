@@ -37,7 +37,7 @@ To install binary package:
 
 Requirements:
 
-* Ubuntu 22.04, Ubuntu 24.04, Debian 12
+* Ubuntu 24.04, Ubuntu 26.04, Debian 13
 * [ndn-cxx](https://docs.named-data.net/ndn-cxx/) installed from source or [NFD-nightly](https://nfd-nightly.ndn.today/) `libndn-cxx-dev` package
 
 To compile and install:
