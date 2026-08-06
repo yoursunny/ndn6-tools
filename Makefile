@@ -24,7 +24,7 @@ all: $(PROGRAMS)
 
 .PHONY: lint
 lint:
-	clang-format-15 -i *.hpp *.cpp
+	clang-format-19 -i *.hpp *.cpp
 
 .PHONY: clean
 clean:

@@ -25,7 +25,7 @@ jobs:
       - run: make
       - run: sudo make install
       - run: |
-          sudo apt-get install --no-install-recommends clang-format-15
+          sudo apt-get install --no-install-recommends clang-format-19
           make lint
           git diff --exit-code
   debuild:
